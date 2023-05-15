@@ -5,6 +5,8 @@ import cvxpy as cp
 from config import *
 from logger import logger
 
+TARGET_DEMAND_CONSTRAINT_NAME = 'target-demand-constraint'
+BLOCK_DEMAND_CONSTRAINT_NAME = 'demand-increase-constraint'
 DEMAND_CONSTRAINT_NAME = 'demand-constraint'
 STATUS_CONSTRAINT_NAME = 'status-constraint'
 MIN_POWER_CONSTRAINT_NAME = 'min_power-constraint'
@@ -54,7 +56,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
         constraint = d_[t_ + 1] - d_[t_] <= block_limit
 
         # Assign a name to the constraint
-        constraint._name = 'demand-increase-constraint'
+        constraint._name = BLOCK_DEMAND_CONSTRAINT_NAME
 
         # Return the constraint
         return constraint
@@ -236,10 +238,12 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
     constraints_dict = collections.defaultdict(list)
 
     # Demand target constraint
-    demand_target_constraint = d[Dtargettime] >= Dtargetvol
-    demand_target_constraint.name = 'demand_target_constraint'
-
-    constraints.append(demand_target_constraint)
+    for idt, t in enumerate(range(T_)):  # for each timestep
+        if t >= Dtargettime:
+            demand_target_constraint = d[t] >= Dtargetvol
+            demand_target_constraint.name = TARGET_DEMAND_CONSTRAINT_NAME
+            constraints.append(demand_target_constraint)
+            constraints_dict[TARGET_DEMAND_CONSTRAINT_NAME].append(demand_target_constraint)
 
     for idt, t in enumerate(range(T_)):  # for each timestep
         # Demand constraint
@@ -253,7 +257,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
         if not_in_last_iteration:
             demand_increase_constraints = _block_load_constraint(d, t)
             constraints, constraints_dict = _store_constraints(
-                constraints, constraints_dict, demand_increase_constraints, 'demand-increase-constraint'
+                constraints, constraints_dict, demand_increase_constraints, BLOCK_DEMAND_CONSTRAINT_NAME
             )
 
         for i in range(N):  # for each generator

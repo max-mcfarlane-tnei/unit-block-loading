@@ -37,7 +37,7 @@ def run_basic_example():
     renewables = wind + solar
 
     # Create sample block loading targets
-    block_loading_targets = pd.Series({'time': demand.index[-1], 'volume': demand[-1]})
+    block_loading_targets = pd.Series({'time': demand.index[-10], 'volume': demand[-1]})
 
     # Build the optimization problem with demand, renewables, generators and block loading targets
     prob, u, c, p, d = optimisation.build(demand, renewables, generators, block_loading_targets)
