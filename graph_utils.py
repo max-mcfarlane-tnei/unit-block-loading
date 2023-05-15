@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import plotly.subplots
 from plotly import express as px
 
 DIR = os.path.dirname(__file__)
@@ -53,7 +54,49 @@ def generate_gantt(_windows, times):
 def active_power_chart(active_power, generators):
     # Plot multiple lines
     active_power_fig = px.line(active_power,
-                               y=['forecasted demand', 'wind', 'solar', 'net demand', 'net generation', 'block demand'] + generators['Name'].tolist())
+                               y=['forecasted demand', 'wind', 'solar', 'net demand', 'net generation', 'block demand'] + generators)
     active_power_fig.update_layout(xaxis_title='Time', yaxis_title='MW',
                                    title='Active Power Inputs')
     return active_power_fig
+
+
+def visualise(u, active_power, generators):
+    """
+    Visualizes the optimization results by generating Gantt charts for generator on/off status and active power generation.
+
+    Args:
+        u (pd.DataFrame): Binary variable indicating generator on/off status.
+        active_power (pd.DataFrame): DataFrame representing active power generation.
+        generators (list): List of generator names.
+
+    Returns:
+        None
+    """
+
+    # Generate task windows based on changes in generator status
+    windows = u.diff(axis=1).fillna(u)
+    windows_melted = windows.melt(var_name='time', value_name='action', ignore_index=False)
+    windows_melted['action'] = windows_melted['action'].round(0)
+    windows_melted = windows_melted.query('action!=0')
+
+    # Generate a Gantt chart based on the task windows
+    decision_fig = generate_gantt(windows_melted, u.columns)
+
+    # Generate a chart showing the active power generation
+    active_power_fig = active_power_chart(active_power, generators)
+
+    # Create a Plotly subplot
+    subplots = plotly.subplots.make_subplots(rows=2, cols=1, row_heights=[0.5, 1], shared_xaxes=True)
+
+    # Add the decision Gantt chart to the first subplot
+    subplots.add_traces(decision_fig.data, rows=[1] * len(decision_fig.data), cols=[1] * len(decision_fig.data))
+
+    # Add the active power chart to the second subplot
+    subplots.add_traces(active_power_fig.data, rows=[2] * len(active_power_fig.data),
+                        cols=[1] * len(active_power_fig.data))
+
+    # Update the x-axis type to 'date' for time-based plotting
+    subplots.update_xaxes(type='date')
+
+    # Show the subplot containing both the decision and active power charts
+    subplots.show()
