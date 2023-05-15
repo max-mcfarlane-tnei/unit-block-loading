@@ -1,13 +1,12 @@
 import os
 
 import pandas as pd
-import plotly.subplots
 
 import config
-import graph_utils
 import io_
 import optimisation
 from config import *
+from graph_utils import visualise
 
 DIR = os.path.dirname(__file__)
 
@@ -21,6 +20,7 @@ def define_block_load_targets(demand):
 
     Returns:
         pd.DataFrame: A DataFrame containing the block loading targets, including the target datetime and volume.
+        pd.Series: A Series containing the block loading targets per timestep.
     """
 
     # Create block loading targets for multiple target configurations
@@ -29,7 +29,7 @@ def define_block_load_targets(demand):
     first_date = pd.to_datetime(demand.sort_index().index[0])
 
     # Initialize a list to store the block loading targets
-    block_loading_targets = []
+    target_checkpoints = []
 
     # Iterate over each target configuration in the config.TARGETS list
     for target_ in config.TARGETS:
@@ -52,27 +52,30 @@ def define_block_load_targets(demand):
         target_volume = demand[demand.index[closest_index]] * target_proportion
 
         # Create a series containing the target datetime and volume
-        block_loading_targets_ = pd.Series({
+        target_checkpoints_ = pd.Series({
             'time': target_datetime,
             'volume': target_volume,
             'block_limit': config.BLOCK_LIMIT
         })
 
         # Append the block loading targets series to the list
-        block_loading_targets.append(block_loading_targets_)
+        target_checkpoints.append(target_checkpoints_)
 
     # Concatenate the block loading targets list into a single DataFrame
-    block_loading_targets = pd.concat(block_loading_targets, axis=1)
+    target_checkpoints = pd.concat(target_checkpoints, axis=1)
 
     # Transpose the DataFrame and set the 'time' column as the index
-    block_loading_targets = block_loading_targets.T.set_index('time')
+    target_checkpoints = target_checkpoints.T.set_index('time')
 
-    _block_target_t = [((demand.index < r.Index), r.volume) for r in block_loading_targets.sort_index(ascending=False).itertuples()]
-    block_target = pd.Series(index=demand.index, data=[0]*len(demand))
+    # Create a block loading targets series per timestep
+    _block_target_t = [
+        ((demand.index < r.Index), r.volume) for r in target_checkpoints.sort_index(ascending=False).itertuples()
+    ]
+    block_loading_targets = pd.Series(index=demand.index, data=[0] * len(demand))
     for idx_mask, block_target_ in _block_target_t:
-        block_target[idx_mask] = block_target_
+        block_loading_targets[idx_mask] = block_target_
 
-    return block_loading_targets, block_target
+    return target_checkpoints, block_loading_targets
 
 
 def run_basic_example():
@@ -91,7 +94,7 @@ def run_basic_example():
     generators = io_.sample_generators(num_generators=N, total_capacity=(demand - wind - solar).max())
 
     # Plot the active power generation using wind, solar, and demand data
-    active_power_plot = io_.plot_active_power_generation(wind, solar, demand)
+    # active_power_plot = io_.plot_active_power_generation(wind, solar, demand)
 
     # Uncomment the following line if you want to show the active power plot
     # active_power_plot.show()
@@ -99,10 +102,11 @@ def run_basic_example():
     # Calculate the total renewable power output by summing wind and solar power
     renewables = wind + solar
 
-    block_loading_targets, block_target = define_block_load_targets(demand)
+    # Compile block loading targets
+    target_checkpoints, block_loading_targets = define_block_load_targets(demand)
 
     # Build the optimization problem with demand, renewables, generators and block loading targets
-    prob, u, c, p, d = optimisation.build(demand, renewables, generators, block_loading_targets, block_target)
+    prob, u, c, p, d = optimisation.build(demand, renewables, generators, target_checkpoints, block_loading_targets)
 
     # Solve the optimization problem
     prob, u, c, p, d = optimisation.solve(prob, u, c, p, d)
@@ -113,18 +117,11 @@ def run_basic_example():
         constraint_status, constraint_group_problem = optimisation.relax_constraints(prob)
         exit()
 
+    # Create a dataframe for block demand
     d = pd.Series(d.value, index=demand.index)
-    block_eval = pd.DataFrame({'block_load': d, 'target': block_target})
-    block_eval['penalty'] = (block_eval['target'] - block_eval['block_load']).abs()
+
     # Create a dataframe with the start and end times for each task
     u = pd.DataFrame(u.value, index=generators['Name'], columns=demand.index)
-    windows = u.diff(axis=1).fillna(u)
-    windows_melted = windows.melt(var_name='time', value_name='action', ignore_index=False)
-    windows_melted['action'] = windows_melted['action'].round(0)
-    windows_melted = windows_melted.query('action!=0')
-
-    # Generate a Gantt chart based on the task windows
-    decision_fig = graph_utils.generate_gantt(windows_melted, u.columns)
 
     # Create dataframes for power output and cost for each generator and time period
     p = pd.DataFrame(p.value, index=generators['Name'], columns=demand.index)
@@ -139,24 +136,7 @@ def run_basic_example():
     active_power['net demand'] = demand - wind - solar
     active_power['net generation'] = active_power[generators['Name']].sum(axis=1)
 
-    # Generate a chart showing the active power generation
-    active_power_fig = graph_utils.active_power_chart(active_power, generators)
-
-    # Create a Plotly subplot
-    subplots = plotly.subplots.make_subplots(rows=2, cols=1, row_heights=[0.5, 1], shared_xaxes=True)
-
-    # Add the decision Gantt chart to the first subplot
-    subplots.add_traces(decision_fig.data, rows=[1] * len(decision_fig.data), cols=[1] * len(decision_fig.data))
-
-    # Add the active power chart to the second subplot
-    subplots.add_traces(active_power_fig.data, rows=[2] * len(active_power_fig.data),
-                        cols=[1] * len(active_power_fig.data))
-
-    # Update the x-axis type to 'date' for time-based plotting
-    subplots.update_xaxes(type='date')
-
-    # Show the subplot containing both the decision and active power charts
-    subplots.show()
+    visualise(u, active_power, generators['Name'].tolist())
 
 
 if __name__ == '__main__':
