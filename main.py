@@ -1,15 +1,72 @@
 import os
 
-import pandas as pd
 import plotly.subplots
 
 import config
+import graph_utils
 import io_
 import optimisation
 from config import *
-import graph_utils
 
 DIR = os.path.dirname(__file__)
+
+
+def define_block_load_targets(demand):
+    """
+    Defines block loading targets based on the given demand data.
+
+    Args:
+        demand (pd.Series): Time series data representing the demand.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the block loading targets, including the target datetime and volume.
+    """
+
+    # Create block loading targets for multiple target configurations
+
+    # Convert the index of the demand series to a pandas datetime if needed
+    first_date = pd.to_datetime(demand.sort_index().index[0])
+
+    # Initialize a list to store the block loading targets
+    block_loading_targets = []
+
+    # Iterate over each target configuration in the config.TARGETS list
+    for target_ in config.TARGETS:
+        target_days = target_[0]
+        target_proportion = target_[1]
+
+        # Set the target datetime by adding a timedelta to the first date
+        target_datetime = first_date + pd.Timedelta(days=target_days)
+
+        # Calculate the absolute time difference between each index value and the target datetime
+        time_diff = abs((demand.index - target_datetime).values)
+
+        # Find the index label corresponding to the minimum time difference
+        closest_index = time_diff.argmin()
+
+        # Retrieve the target datetime from the demand index at the closest index
+        target_datetime = demand.index[closest_index]
+
+        # Calculate the target volume based on the demand value at the closest index multiplied by the target proportion
+        target_volume = demand[demand.index[closest_index]] * target_proportion
+
+        # Create a series containing the target datetime and volume
+        block_loading_targets_ = pd.Series({
+            'time': target_datetime,
+            'volume': target_volume,
+            'block_limit': config.BLOCK_LIMIT
+        })
+
+        # Append the block loading targets series to the list
+        block_loading_targets.append(block_loading_targets_)
+
+    # Concatenate the block loading targets list into a single DataFrame
+    block_loading_targets = pd.concat(block_loading_targets, axis=1)
+
+    # Transpose the DataFrame and set the 'time' column as the index
+    block_loading_targets = block_loading_targets.T.set_index('time')
+
+    return block_loading_targets
 
 
 def run_basic_example():
@@ -36,8 +93,7 @@ def run_basic_example():
     # Calculate the total renewable power output by summing wind and solar power
     renewables = wind + solar
 
-    # Create sample block loading targets
-    block_loading_targets = pd.Series({'time': demand.index[-10], 'volume': demand[-1]})
+    block_loading_targets = define_block_load_targets(demand)
 
     # Build the optimization problem with demand, renewables, generators and block loading targets
     prob, u, c, p, d = optimisation.build(demand, renewables, generators, block_loading_targets)
@@ -72,6 +128,7 @@ def run_basic_example():
     active_power = pd.concat([active_power, p.T], axis=1)
 
     # Calculate net demand and net generation by summing the power output of all generators
+    active_power['block demand'] = d
     active_power['net demand'] = demand - wind - solar
     active_power['net generation'] = active_power[generators['Name']].sum(axis=1)
 

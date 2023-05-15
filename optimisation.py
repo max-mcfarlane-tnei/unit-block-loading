@@ -6,7 +6,8 @@ from config import *
 from logger import logger
 
 TARGET_DEMAND_CONSTRAINT_NAME = 'target-demand-constraint'
-BLOCK_DEMAND_CONSTRAINT_NAME = 'demand-increase-constraint'
+BLOCK_DEMAND_INCREASE_CONSTRAINT_NAME = 'demand-increase-constraint'
+BLOCK_DEMAND_DECREASE_CONSTRAINT_NAME = 'demand-decrease-constraint'
 DEMAND_CONSTRAINT_NAME = 'demand-constraint'
 STATUS_CONSTRAINT_NAME = 'status-constraint'
 MIN_POWER_CONSTRAINT_NAME = 'min_power-constraint'
@@ -24,7 +25,7 @@ CONSTRAINT_NAMES = [
 ]
 
 
-def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettime, Dtargetvol, T_=T):
+def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, t_index, T_=T):
     """
     Define constraints for an optimization problem.
 
@@ -42,7 +43,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
     :return: List of constraints and constraints categorized by type in a dictionary.
     """
 
-    def _block_load_constraint(d_, t_, block_limit=10):
+    def _block_load_increase_constraint(d_, t_, block_limit=10):
         """
         Constraint function for limiting the increase in demand per block.
 
@@ -56,7 +57,19 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
         constraint = d_[t_ + 1] - d_[t_] <= block_limit
 
         # Assign a name to the constraint
-        constraint._name = BLOCK_DEMAND_CONSTRAINT_NAME
+        constraint._name = BLOCK_DEMAND_INCREASE_CONSTRAINT_NAME
+
+        # Return the constraint
+        return constraint
+
+    def _block_load_decrease_constraint(d_, t_):
+        """
+
+        """
+        constraint = d_[t_ + 1] - d_[t_] >= 0
+
+        # Assign a name to the constraint
+        constraint._name = BLOCK_DEMAND_DECREASE_CONSTRAINT_NAME
 
         # Return the constraint
         return constraint
@@ -237,10 +250,25 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
     constraints = []
     constraints_dict = collections.defaultdict(list)
 
+    Dtargets.sort_index(inplace=True)
+    Dtargets['t_index'] = [t_index.tolist().index(t) for t in Dtargets.index]
+    Dtargets_ = Dtargets.copy()
+    Dtargettime = Dtargets_.iloc[0]['t_index']
+    Dtargetvol = Dtargets_.iloc[0]['volume']
+
     # Demand target constraint
     for idt, t in enumerate(range(T_)):  # for each timestep
-        if t >= Dtargettime:
+        if t == Dtargettime:
             demand_target_constraint = d[t] >= Dtargetvol
+            demand_target_constraint.name = TARGET_DEMAND_CONSTRAINT_NAME
+            constraints.append(demand_target_constraint)
+            constraints_dict[TARGET_DEMAND_CONSTRAINT_NAME].append(demand_target_constraint)
+            Dtargets_ = Dtargets_.iloc[1:]
+            if not Dtargets_.empty:
+                Dtargettime = Dtargets_.iloc[0]['t_index']
+                Dtargetvol = Dtargets_.iloc[0]['volume']
+        if t > Dtargettime and Dtargets_.empty:
+            demand_target_constraint = d[t] == D[t]
             demand_target_constraint.name = TARGET_DEMAND_CONSTRAINT_NAME
             constraints.append(demand_target_constraint)
             constraints_dict[TARGET_DEMAND_CONSTRAINT_NAME].append(demand_target_constraint)
@@ -254,10 +282,15 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettim
         not_in_last_iteration = idt < T_-1
 
         # Demand increase constraint
-        if not_in_last_iteration:
-            demand_increase_constraints = _block_load_constraint(d, t)
+        if not_in_last_iteration and t <= Dtargettime:
+            block_limit = Dtargets[t <= Dtargets['t_index']].iloc[0]['block_limit']
+            demand_increase_constraints = _block_load_increase_constraint(d, t, block_limit=block_limit)
             constraints, constraints_dict = _store_constraints(
-                constraints, constraints_dict, demand_increase_constraints, BLOCK_DEMAND_CONSTRAINT_NAME
+                constraints, constraints_dict, demand_increase_constraints, BLOCK_DEMAND_INCREASE_CONSTRAINT_NAME
+            )
+            demand_decrease_constraints = _block_load_decrease_constraint(d, t)
+            constraints, constraints_dict = _store_constraints(
+                constraints, constraints_dict, demand_decrease_constraints, BLOCK_DEMAND_DECREASE_CONSTRAINT_NAME
             )
 
         for i in range(N):  # for each generator
@@ -302,9 +335,8 @@ def build(demand, renewables, generators, block_loading_targets):
     - demand: Pandas DataFrame representing the demand data.
     - renewables: Pandas DataFrame representing the renewable power output data.
     - generators: Pandas DataFrame representing the generator data.
-    - block_loading_targets: Pandas Series representing the block loading targets.
-        - index: None
-        - time: datetime
+    - block_loading_targets: Pandas DataFrame representing the block loading targets.
+        - index: datetime
             Target datetime for block loading
         - volume: float
             Target volume for block loading
@@ -318,6 +350,7 @@ def build(demand, renewables, generators, block_loading_targets):
     """
 
     # Extract the data as numpy arrays
+    t_index = demand.index
     D = demand.values  # total forecasted demand
     F = renewables.values
     Gmin = generators['Minimum power output'].values
@@ -327,11 +360,7 @@ def build(demand, renewables, generators, block_loading_targets):
     Cminon = generators['Minimum on-time'].values
     Cminoff = generators['Minimum off-time'].values
 
-    # Extract block loading targets
-    Dtargettime, Dtargetvol = block_loading_targets['time'], block_loading_targets['volume']
-
-    # Obtain index of target time
-    Dtargettime = demand.index.tolist().index(Dtargettime)
+    Dtargets = block_loading_targets
 
     # Define the problem parameters
     T_ = len(D)  # Number of time periods
@@ -344,7 +373,7 @@ def build(demand, renewables, generators, block_loading_targets):
     d = cp.Variable(T_, name='demand')  # Discrete demand variable
 
     constraints_list, constraint_dict = define_constraints(u, c, p, d,
-                                                           F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettime, Dtargetvol)
+                                                           F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, t_index)
 
     # Define the problem objective
     obj = cp.Minimize(cp.sum(
@@ -456,6 +485,7 @@ def relax_constraints(prob, verbose=False):
         logger.warning('Cannot enforce status variable.')
 
     else:
+        print(status_constraints)
         logger.warning('UNKNOWN infeasibility condition.')
 
     # Return the dictionary of modified problem instances

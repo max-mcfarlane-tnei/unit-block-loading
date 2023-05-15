@@ -53,7 +53,7 @@ def generate_gantt(_windows, times):
 def active_power_chart(active_power, generators):
     # Plot multiple lines
     active_power_fig = px.line(active_power,
-                               y=['demand', 'wind', 'solar', 'net demand', 'net generation'] + generators['Name'].tolist())
+                               y=['demand', 'wind', 'solar', 'net demand', 'net generation', 'block demand'] + generators['Name'].tolist())
     active_power_fig.update_layout(xaxis_title='Time', yaxis_title='MW',
                                    title='Active Power Inputs')
     return active_power_fig
