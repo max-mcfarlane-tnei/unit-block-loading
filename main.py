@@ -1,5 +1,6 @@
 import os
 
+import pandas as pd
 import plotly.subplots
 
 import config
@@ -35,17 +36,22 @@ def run_basic_example():
     # Calculate the total renewable power output by summing wind and solar power
     renewables = wind + solar
 
-    # Build the optimization problem with demand, renewables, and generators
-    prob, u, c, p = optimisation.build(demand, renewables, generators)
+    # Create sample block loading targets
+    block_loading_targets = pd.Series({'time': demand.index[-1], 'volume': demand[-1]})
+
+    # Build the optimization problem with demand, renewables, generators and block loading targets
+    prob, u, c, p, d = optimisation.build(demand, renewables, generators, block_loading_targets)
 
     # Solve the optimization problem
-    prob, u, c, p = optimisation.solve(prob, u, c, p)
+    prob, u, c, p, d = optimisation.solve(prob, u, c, p, d)
 
     # Check if the problem has an optimal solution
     if prob.status != 'optimal':
         # Relax the constraints if the problem is infeasible
         constraint_status, constraint_group_problem = optimisation.relax_constraints(prob)
         exit()
+
+    d = pd.Series(d.value, index=demand.index)
 
     # Create a dataframe with the start and end times for each task
     u = pd.DataFrame(u.value, index=generators['Name'], columns=demand.index)

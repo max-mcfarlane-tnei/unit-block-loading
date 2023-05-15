@@ -22,13 +22,14 @@ CONSTRAINT_NAMES = [
 ]
 
 
-def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
+def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettime, Dtargetvol, T_=T):
     """
     Define constraints for an optimization problem.
 
     :param u: Binary variable indicating generator on/off status.
     :param c: Binary variable indicating generator startup status.
     :param p: Variable representing generator power output.
+    :param d: Variable representing block load.
     :param F: Variable representing wind power.
     :param D: Variable representing demand.
     :param Gmax: List of maximum generator capacities.
@@ -38,6 +39,25 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
     :param T_: Number of timesteps.
     :return: List of constraints and constraints categorized by type in a dictionary.
     """
+
+    def _block_load_constraint(d_, t_, block_limit=10):
+        """
+        Constraint function for limiting the increase in demand per block.
+
+        Parameters:
+        - d_: Variable representing the demand.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraint limiting the increase in demand per block.
+        """
+        constraint = d_[t_ + 1] - d_[t_] <= block_limit
+
+        # Assign a name to the constraint
+        constraint._name = 'demand-increase-constraint'
+
+        # Return the constraint
+        return constraint
 
     def _demand_constraint(p_, F_, D_, t_):
         """
@@ -215,11 +235,26 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
     constraints = []
     constraints_dict = collections.defaultdict(list)
 
-    for t in range(T_):  # for each timestep
+    # Demand target constraint
+    demand_target_constraint = d[Dtargettime] >= Dtargetvol
+    demand_target_constraint.name = 'demand_target_constraint'
+
+    constraints.append(demand_target_constraint)
+
+    for idt, t in enumerate(range(T_)):  # for each timestep
         # Demand constraint
         demand_constraints = _demand_constraint(p, F, D, t)
         constraints.append(demand_constraints)
         constraints_dict[DEMAND_CONSTRAINT_NAME].append(demand_constraints)
+
+        not_in_last_iteration = idt < T_-1
+
+        # Demand increase constraint
+        if not_in_last_iteration:
+            demand_increase_constraints = _block_load_constraint(d, t)
+            constraints, constraints_dict = _store_constraints(
+                constraints, constraints_dict, demand_increase_constraints, 'demand-increase-constraint'
+            )
 
         for i in range(N):  # for each generator
             # Status constraints
@@ -255,7 +290,7 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
     return constraints, constraints_dict
 
 
-def build(demand, renewables, generators):
+def build(demand, renewables, generators, block_loading_targets):
     """
     Method for building optimization model.
 
@@ -263,16 +298,23 @@ def build(demand, renewables, generators):
     - demand: Pandas DataFrame representing the demand data.
     - renewables: Pandas DataFrame representing the renewable power output data.
     - generators: Pandas DataFrame representing the generator data.
+    - block_loading_targets: Pandas Series representing the block loading targets.
+        - index: None
+        - time: datetime
+            Target datetime for block loading
+        - volume: float
+            Target volume for block loading
 
     Returns:
     - prob: The optimization problem.
     - u: Decision variable representing the on/off status of generators.
     - c: Decision variable representing the start-up status of generators.
     - p: Decision variable representing the power output of generators.
+    - d: Variable representing block load.
     """
 
     # Extract the data as numpy arrays
-    D = demand.values
+    D = demand.values  # total forecasted demand
     F = renewables.values
     Gmin = generators['Minimum power output'].values
     Gmax = generators['Maximum power output'].values
@@ -280,6 +322,12 @@ def build(demand, renewables, generators):
     Cfuel = generators['Fuel cost'].values
     Cminon = generators['Minimum on-time'].values
     Cminoff = generators['Minimum off-time'].values
+
+    # Extract block loading targets
+    Dtargettime, Dtargetvol = block_loading_targets['time'], block_loading_targets['volume']
+
+    # Obtain index of target time
+    Dtargettime = demand.index.tolist().index(Dtargettime)
 
     # Define the problem parameters
     T_ = len(D)  # Number of time periods
@@ -289,8 +337,10 @@ def build(demand, renewables, generators):
     u = cp.Variable((N, T_), boolean=True, name='on_off')  # On/off status
     c = cp.Variable((N, T_), boolean=True, name='startup')  # Start-up status
     p = cp.Variable((N, T_), name='power_out')  # Power output
+    d = cp.Variable(T_, name='demand')  # Discrete demand variable
 
-    constraints_list, constraint_dict = define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff)
+    constraints_list, constraint_dict = define_constraints(u, c, p, d,
+                                                           F, D, Gmax, Gmin, Cminon, Cminoff, Dtargettime, Dtargetvol)
 
     # Define the problem objective
     obj = cp.Minimize(cp.sum(
@@ -304,10 +354,10 @@ def build(demand, renewables, generators):
 
     prob.constraint_dict = constraint_dict
 
-    return prob, u, c, p
+    return prob, u, c, p, d
 
 
-def solve(prob, u, c, p, verbose=True):
+def solve(prob, u, c, p, d, verbose=True):
     """Method for solving."""
 
     prob.solve(solver=cp.CBC, verbose=verbose)
@@ -317,7 +367,7 @@ def solve(prob, u, c, p, verbose=True):
     # print("On/off status: ", u.value)
     # print("Start-up status: ", c.value)
     # print("Power output: ", p.value)
-    return prob, u, c, p
+    return prob, u, c, p, d
 
 
 def relax_constraints(prob, verbose=False):
