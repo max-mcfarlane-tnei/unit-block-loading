@@ -40,7 +40,18 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
     """
 
     def _demand_constraint(p_, F_, D_, t_):
-        """Generation == Demand"""
+        """
+        Constraint function for ensuring that generation equals demand at a given timestep.
+
+        Parameters:
+        - p_: Power output of generators at the given timestep.
+        - F_: Wind power output at the given timestep.
+        - D_: Demand at the given timestep.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraint ensuring that the total power output of generators and wind power is greater than or equal to demand.
+        """
 
         # Sum the power output of all generators (p_[:, t_]) at timestep t_ and add the wind power (F_[t_])
         # Ensure that the total is greater than or equal to the demand (D_[t_])
@@ -53,7 +64,22 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
         return constraint
 
     def _status_constraint(Gmin_, Cminon_, u_, c_, p_, i_, t_):
-        """Generator status is determined based on power output"""
+        """
+        Constraint function for determining the generator status based on power output.
+
+        Parameters:
+        - Gmin_: Minimum power output of the generator.
+        - Cminon_: Minimum on-time of the generator.
+        - u_: Decision variable representing the on/off status of generators.
+        - c_: Decision variable representing the start-up status of generators.
+        - p_: Decision variable representing the power output of generators.
+        - i_: Generator index.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraints determining the generator status based on power output.
+        """
+
         M = 1e6  # Choose a large positive constant
 
         constraint = [
@@ -64,7 +90,19 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
         return constraint
 
     def _min_power_constraint(Gmin_, u_, p_, i_, t_):
-        """Generator output must be at least Gmin"""
+        """
+        Constraint function for ensuring that the generator output is at least the minimum power output (Gmin).
+
+        Parameters:
+        - Gmin_: Minimum power output of the generator.
+        - u_: Decision variable representing the on/off status of generators.
+        - p_: Decision variable representing the power output of generators.
+        - i_: Generator index.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraint ensuring that the generator output is at least the minimum power output (Gmin).
+        """
 
         # Ensure that the power output (p_[i_, t_]) is at least Gmin_[i_] multiplied by the on/off status (u_[i_, t_])
         constraint = Gmin_[i_] * u_[i_, t_] <= p_[i_, t_]
@@ -76,7 +114,19 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
         return constraint
 
     def _max_power_constraint(Gmax_, u_, p_, i_, t_):
-        """Generator output must be at most Gmax"""
+        """
+        Constraint function for ensuring that the generator output is at most the maximum power output (Gmax).
+
+        Parameters:
+        - Gmax_: Maximum power output of the generator.
+        - u_: Decision variable representing the on/off status of generators.
+        - p_: Decision variable representing the power output of generators.
+        - i_: Generator index.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraint ensuring that the generator output is at most the maximum power output (Gmax).
+        """
 
         # Ensure that the power output (p_[i_, t_]) is at most Gmax_[i_] multiplied by the on/off status (u_[i_, t_])
         constraint = p_[i_, t_] <= Gmax_[i_] * u_[i_, t_]
@@ -88,7 +138,19 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
         return constraint
 
     def _start_up_constraint(Cminon_, u_, c_, i_, t_):
-        """Generator must be on for at least Cminon timesteps"""
+        """
+        Constraint function for ensuring that the generator is on for at least Cminon timesteps.
+
+        Parameters:
+        - Cminon_: Minimum on-time of the generator.
+        - u_: Decision variable representing the on/off status of generators.
+        - c_: Decision variable representing the start-up status of generators.
+        - i_: Generator index.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraint ensuring that the generator is on for at least Cminon timesteps.
+        """
 
         # If the current timestep is greater than or equal to Cminon_[i_]
         if t_ >= Cminon_[i_]:
@@ -106,7 +168,18 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
         return constraint
 
     def _cool_down_constraint(Cminoff_, u_, i_, t_):
-        """Generator must be off for at least Cminoff timesteps"""
+        """
+        Constraint function for ensuring that the generator is off for at least Cminoff timesteps.
+
+        Parameters:
+        - Cminoff_: Minimum off-time of the generator.
+        - u_: Decision variable representing the on/off status of generators.
+        - i_: Generator index.
+        - t_: Timestep index.
+
+        Returns:
+        - constraint: Constraint ensuring that the generator is off for at least Cminoff timesteps.
+        """
 
         # Sum the periods when the generator is on (u_ = 0) over the previous Cminoff_[i_] timesteps
         # and ensure it is at least (1 - u_[i_, t_])
@@ -118,13 +191,25 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
         # Return the constraint
         return constraint
 
-    def _store_constraints(all_contraints, all_contraints_dict, _constraints, name):
-        all_contraints.extend(_constraints) if isinstance(_constraints, list) else all_contraints.append(
-            _constraints)
-        all_contraints_dict[name].extend(status_constraints) if isinstance(_constraints,
-                                                                                          list) else \
-            all_contraints_dict[name].append(status_constraints)
-        return all_contraints, all_contraints_dict
+    def _store_constraints(all_constraints, all_constraints_dict, _constraints, name):
+        """
+        Helper function for storing constraints in lists and dictionaries.
+
+        Parameters:
+        - all_constraints: List of all constraints.
+        - all_constraints_dict: Dictionary of constraints organized by name.
+        - _constraints: Constraints to be stored.
+        - name: Name of the constraints.
+
+        Returns:
+        - all_constraints: Updated list of all constraints.
+        - all_constraints_dict: Updated dictionary of constraints.
+        """
+
+        all_constraints.extend(_constraints) if isinstance(_constraints, list) else all_constraints.append(_constraints)
+        all_constraints_dict[name].extend(_constraints) if isinstance(_constraints, list) else all_constraints_dict[
+            name].append(_constraints)
+        return all_constraints, all_constraints_dict
 
     # Define the problem constraints
     constraints = []
@@ -171,7 +256,20 @@ def define_constraints(u, c, p, F, D, Gmax, Gmin, Cminon, Cminoff, T_=T):
 
 
 def build(demand, renewables, generators):
-    """Method for building optimisation model"""
+    """
+    Method for building optimization model.
+
+    Parameters:
+    - demand: Pandas DataFrame representing the demand data.
+    - renewables: Pandas DataFrame representing the renewable power output data.
+    - generators: Pandas DataFrame representing the generator data.
+
+    Returns:
+    - prob: The optimization problem.
+    - u: Decision variable representing the on/off status of generators.
+    - c: Decision variable representing the start-up status of generators.
+    - p: Decision variable representing the power output of generators.
+    """
 
     # Extract the data as numpy arrays
     D = demand.values
