@@ -1,6 +1,6 @@
 import os
 
-import pandas
+import pandas as pd
 from plotly import express as px
 
 DIR = os.path.dirname(__file__)
