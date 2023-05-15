@@ -1,5 +1,6 @@
 import os
 
+import pandas as pd
 import plotly.subplots
 
 import config
@@ -66,7 +67,12 @@ def define_block_load_targets(demand):
     # Transpose the DataFrame and set the 'time' column as the index
     block_loading_targets = block_loading_targets.T.set_index('time')
 
-    return block_loading_targets
+    _block_target_t = [((demand.index < r.Index), r.volume) for r in block_loading_targets.sort_index(ascending=False).itertuples()]
+    block_target = pd.Series(index=demand.index, data=[0]*len(demand))
+    for idx_mask, block_target_ in _block_target_t:
+        block_target[idx_mask] = block_target_
+
+    return block_loading_targets, block_target
 
 
 def run_basic_example():
@@ -93,10 +99,10 @@ def run_basic_example():
     # Calculate the total renewable power output by summing wind and solar power
     renewables = wind + solar
 
-    block_loading_targets = define_block_load_targets(demand)
+    block_loading_targets, block_target = define_block_load_targets(demand)
 
     # Build the optimization problem with demand, renewables, generators and block loading targets
-    prob, u, c, p, d = optimisation.build(demand, renewables, generators, block_loading_targets)
+    prob, u, c, p, d = optimisation.build(demand, renewables, generators, block_loading_targets, block_target)
 
     # Solve the optimization problem
     prob, u, c, p, d = optimisation.solve(prob, u, c, p, d)
@@ -108,7 +114,8 @@ def run_basic_example():
         exit()
 
     d = pd.Series(d.value, index=demand.index)
-
+    block_eval = pd.DataFrame({'block_load': d, 'target': block_target})
+    block_eval['penalty'] = (block_eval['target'] - block_eval['block_load']).abs()
     # Create a dataframe with the start and end times for each task
     u = pd.DataFrame(u.value, index=generators['Name'], columns=demand.index)
     windows = u.diff(axis=1).fillna(u)

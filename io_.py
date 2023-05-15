@@ -104,7 +104,7 @@ def get_historic_demand_wind_solar():
     # Return the relevant columns from data
     return response_data['EMBEDDED_WIND_GENERATION']._set_name('wind'), \
         response_data['EMBEDDED_SOLAR_GENERATION']._set_name('solar'), \
-        response_data['ND']._set_name('demand')
+        response_data['ND']._set_name('forecasted demand')
 
 
 def generate_active_power_inputs():
