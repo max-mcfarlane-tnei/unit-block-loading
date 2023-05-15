@@ -1,0 +1,10 @@
+cvxpy
+pandas
+numpy
+cylp
+matplotlib
+plotly
+openpyxl
+dash
+bokeh
+requests
