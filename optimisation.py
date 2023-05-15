@@ -321,7 +321,7 @@ def solve(prob, u, c, p, verbose=True):
 
 
 def relax_constraints(prob, verbose=False):
-    """Method for assessing infeasibility and modifying constraints.
+    """Method for assessing infeasibility by modifying constraints.
 
     This method follows the steps below to assess infeasibility and identify the constraints that significantly contribute
     to it. It then revises or modifies the problem formulation, constraints, or problem data to make the problem feasible.
