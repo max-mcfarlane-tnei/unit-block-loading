@@ -6,25 +6,23 @@ This repository provides an example implementation of block loading optimization
 
 ## Key Features
 
-- **Optimization Algorithms**: The repository includes state-of-the-art optimization algorithms tailored for block loading scenarios during blackstart situations. These algorithms efficiently allocate resources and generation units to meet demand and restore power reliably and quickly.
+- **Optimization Algorithms**: The repository includes basic optimization algorithms tailored for block loading scenarios during a blackstart scenario. These algorithms efficiently allocate resources and generation units to meet demand and restore power reliably and quickly.
 
-- **Demand and Generation Modeling**: Comprehensive models and data representations capture the characteristics of demand and generation during a blackstart scenario. The models consider load profiles, resource constraints, and system limitations, ensuring accurate and realistic simulations.
+- **Demand and Generation Modeling**: Simplistic data representations capture the characteristics of demand and generation during a blackstart scenario. The models consider load profiles, resource constraints, and system limitations.
 
-- **Flexible Configuration**: The repository is highly customizable, allowing users to configure and adapt the optimization process to their specific needs. It provides parameters and options to fine-tune the algorithmic behavior, making it suitable for integration into various power system environments and scenarios.
+- **Visualization**: Visualization capabilities are included to present the optimization results clearly and insightfully. Users can generate charts and graphs that showcase optimized block loading schedules and resource allocations.
 
-- **Visualization and Reporting**: Visualization tools and reporting capabilities are included to present the optimization results clearly and insightfully. Users can generate charts, graphs, and reports that showcase optimized block loading schedules, resource allocations, and system performance, facilitating effective communication and decision-making.
-
-- **Documentation and Tutorials**: Comprehensive documentation and tutorials guide users through the repository, explaining optimization concepts, data requirements, and usage instructions. This facilitates quick understanding and utilization of the repository's functionalities.
+- **Documentation and Tutorials**: Documentation and tutorials will be released soon.
 
 ## Benefits
 
 - **Efficiency**: The mathematical optimization techniques employed in this repository ensure efficient allocation of resources and generation units, reducing downtime and minimizing restoration time during a blackstart scenario.
 
-- **Reliability**: The optimization algorithms meet demand while adhering to operational constraints, improving the overall reliability and stability of the power system during the restoration process.
+- **Reliability**: The optimization algorithms meet demand while adhering to operational constraints.
 
 - **Cost Savings**: By optimizing the block loading process, this repository minimizes the need for additional resources and generation capacity, resulting in cost savings for power system operators.
 
-- **Scalability**: The repository is designed to handle systems of varying sizes and complexities, making it suitable for both small-scale and large-scale power systems.
+- **Scalability**: The repository is not designed to handle large systems. It does exemplify the underlying processes that a future soltion can be tailored for.
 
 - **Decision Support**: Visualization and reporting capabilities provide actionable insights and a holistic view of the block loading optimization results, aiding decision-making by operators and stakeholders in effectively managing blackstart scenarios.
 
