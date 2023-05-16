@@ -199,4 +199,6 @@ def run_basic_example(
 
 
 if __name__ == '__main__':
-    run_basic_example()
+    run_basic_example(t=48 * 5, n=5, restart_targets=((1, 0.6), (5, 1)), block_limit=500)
+    run_basic_example(t=48 * 5, n=5, restart_targets=((1, 0.6), (5, 1)), block_limit=750)
+    run_basic_example(t=48 * 5, n=5, restart_targets=((1, 0.6), (5, 1)), block_limit=1000)

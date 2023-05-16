@@ -374,7 +374,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, 
         #     constraints, constraints_dict, single_startup_constraint, SINGLE_STARTUP_CONSTRAINT_NAME
         # )
 
-        for i in range(i_index):
+        for i in i_index:
             # Status constraints
             status_constraints = _status_constraint(Gmin, Cminon, u, c, p, i, t)
             constraints, constraints_dict = _store_constraints(
@@ -587,7 +587,7 @@ def relax_constraints(prob, verbose=False):
     return constraint_status, constraint_group_problem
 
 
-def solve(prob, u, c, p, d, verbose=True):
+def solve(prob, u, c, p, d, verbose=True, debug=False):
     """Method for solving."""
 
     prob.solve(solver=cp.CBC, verbose=verbose)
@@ -600,8 +600,9 @@ def solve(prob, u, c, p, d, verbose=True):
 
     # Check if the problem has an optimal solution
     if prob.status != 'optimal':
-        # Relax the constraints if the problem is infeasible
-        constraint_status, constraint_group_problem = relax_constraints(prob)
+        if debug:
+            # Relax the constraints if the problem is infeasible
+            constraint_status, constraint_group_problem = relax_constraints(prob)
         exit()
 
     return prob, u, c, p, d
