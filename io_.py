@@ -1,6 +1,6 @@
 import io
 import os
-
+import pandas as pd
 import plotly.graph_objs as go
 import numpy as np
 import pytz
@@ -8,7 +8,7 @@ import requests
 
 DIR = os.path.dirname(__file__)
 import json
-from config import *
+# from config import *
 
 
 def get_ngeso_wind_day_ahead():
@@ -107,7 +107,7 @@ def get_historic_demand_wind_solar():
         response_data['ND']._set_name('forecasted demand')
 
 
-def generate_active_power_inputs():
+def generate_active_power_inputs(DEMAND_AMPLITUDE, WIND_CAPACITY, T):
     """
     Generates random input data for active power simulations.
 

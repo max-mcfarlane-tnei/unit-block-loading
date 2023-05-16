@@ -5,22 +5,28 @@ import pandas as pd
 import config
 import io_
 import optimisation
-from config import *
+# from config import *
 from graph_utils import visualise
 
 DIR = os.path.dirname(__file__)
 
 
-def define_block_load_targets(demand):
+def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limit=config.BLOCK_LIMIT):
     """
     Defines block loading targets based on the given demand data.
 
-    Args:
-        demand (pd.Series): Time series data representing the demand.
+    Parameters:
+    demand (pd.Series): Time series data representing the demand.
+    targets (list, optional): List of target configurations. Each configuration is a tuple of (target_days, target_proportion).
+                              Default is config.RESTART_TARGETS.
+    block_limit (float, optional): The block limit for block loading. Default is config.BLOCK_LIMIT.
 
     Returns:
-        pd.DataFrame: A DataFrame containing the block loading targets, including the target datetime and volume.
-        pd.Series: A Series containing the block loading targets per timestep.
+    tuple: A tuple containing the following:
+        - target_checkpoints (pd.DataFrame): A DataFrame containing the block loading targets, including the target datetime
+                                             and volume.
+        - block_loading_targets (pd.Series): A Series containing the block loading targets per timestep.
+
     """
 
     # Create block loading targets for multiple target configurations
@@ -32,7 +38,7 @@ def define_block_load_targets(demand):
     target_checkpoints = []
 
     # Iterate over each target configuration in the config.TARGETS list
-    for target_ in config.TARGETS:
+    for target_ in targets:
         target_days = target_[0]
         target_proportion = target_[1]
 
@@ -55,7 +61,7 @@ def define_block_load_targets(demand):
         target_checkpoints_ = pd.Series({
             'time': target_datetime,
             'volume': target_volume,
-            'block_limit': config.BLOCK_LIMIT
+            'block_limit': block_limit
         })
 
         # Append the block loading targets series to the list
@@ -77,26 +83,34 @@ def define_block_load_targets(demand):
 
     return target_checkpoints, block_loading_targets
 
-def prepare_inputs():
+
+def prepare_inputs(t=config.T, n=config.N, targets=config.RESTART_TARGETS, block_limit=config.BLOCK_LIMIT):
     """
-    Prepares inputs for the application by retrieving data, sampling generators, and calculating relevant values.
+    Prepare inputs for the application by retrieving data, sampling generators, and calculating relevant values.
+
+    Parameters:
+    t (int, optional): The time period to consider for the preparation. Default is config.T.
+    n (int, optional): The number of generators to sample. Default is config.N.
+    targets (list, optional): The restart targets for block loading. Default is config.RESTART_TARGETS.
+    block_limit (float, optional): The block limit for block loading. Default is config.BLOCK_LIMIT.
 
     Returns:
     tuple: A tuple containing the following prepared inputs:
-        - demand (DataFrame): Historic demand data limited to a specified time period.
+        - demand (DataFrame): Historic demand data limited to the specified time period.
         - renewables (DataFrame): Total renewable power output calculated from wind and solar data.
         - generators (DataFrame): Sampled generators based on the number of generators and total capacity.
         - target_checkpoints (list): Checkpoints for defining block loading targets.
         - block_loading_targets (DataFrame): Block loading targets for the demand.
+
     """
     # Get historic wind, solar, and demand data
     wind, solar, demand = io_.get_historic_demand_wind_solar()
 
-    # Limit the data to a certain time period specified by 'config.T'
-    wind, solar, demand = wind.iloc[:config.T], solar.iloc[:config.T], demand.iloc[:config.T]
+    # Limit the data to a certain time period specified by t
+    wind, solar, demand = wind.iloc[:t], solar.iloc[:t], demand.iloc[:t]
 
     # Sample generators based on the number of generators ('N') and total capacity
-    generators = io_.sample_generators(num_generators=N, total_capacity=(demand - wind - solar).max())
+    generators = io_.sample_generators(num_generators=n, total_capacity=(demand - wind - solar).max())
 
     # Plot the active power generation using wind, solar, and demand data
     # active_power_plot = io_.plot_active_power_generation(wind, solar, demand)
@@ -108,7 +122,7 @@ def prepare_inputs():
     renewables = wind + solar
 
     # Compile block loading targets
-    target_checkpoints, block_loading_targets = define_block_load_targets(demand)
+    target_checkpoints, block_loading_targets = define_block_load_targets(demand, targets, block_limit)
 
     return demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets
 
@@ -140,12 +154,28 @@ def process_outputs(wind, solar, demand, generators, p, d):
     return active_power
 
 
-def run_basic_example():
+def run_basic_example(
+        t=config.T,
+        n=config.N,
+        restart_targets=config.RESTART_TARGETS,
+        block_limit=config.BLOCK_LIMIT
+):
     """
     Runs a basic unit commitment case optimization process.
-    :return:
+
+    Parameters:
+    t (int, optional): The time period to consider for the optimization process. Default is config.T.
+    n (int, optional): The number of generators to consider for the optimization process. Default is config.N.
+    restart_targets (list, optional): List of restart targets for block loading. Default is config.RESTART_TARGETS.
+    block_limit (float, optional): The block limit for block loading. Default is config.BLOCK_LIMIT.
+
+    Returns:
+    None
+
     """
-    demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets = prepare_inputs()
+    demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets = prepare_inputs(
+        t, n, restart_targets, block_limit
+    )
 
     # Build the optimization problem with demand, renewables, generators and block loading targets
     prob, u, c, p, d = optimisation.build(demand, renewables, generators, target_checkpoints, block_loading_targets)

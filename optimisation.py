@@ -2,8 +2,8 @@ import collections
 
 import cvxpy as cp
 import numpy as np
+import config
 
-from config import *
 from logger import logger
 
 INITIAL_CONDITION_CONSTRAINT_NAME = 'initial-condition-constraint'
@@ -300,7 +300,7 @@ def add_demand_target_constraint(t, Dtargettime, Dtargetvol, Dtargets_, d, D, co
     return Dtargettime, Dtargetvol, Dtargets_
 
 
-def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, t_index, T_=T):
+def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, t_index, i_index, T_=config.T):
     """
     Define constraints for an optimization problem.
 
@@ -317,6 +317,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, 
         Cminoff (list): List of minimum off-time timesteps for generators.
         Dtargets (pd.DataFrame): DataFrame containing the demand targets.
         t_index (np.ndarray): Array of timestep indices.
+        i_index (np.ndarray): Array of generator indices.
         T_ (int): Number of timesteps.
 
     Returns:
@@ -373,7 +374,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, 
         #     constraints, constraints_dict, single_startup_constraint, SINGLE_STARTUP_CONSTRAINT_NAME
         # )
 
-        for i in range(N):
+        for i in range(i_index):
             # Status constraints
             status_constraints = _status_constraint(Gmin, Cminon, u, c, p, i, t)
             constraints, constraints_dict = _store_constraints(
@@ -442,6 +443,7 @@ def build(demand, renewables, generators, target_checkpoints, block_loading_targ
 
     # Extract the data as numpy arrays
     t_index = demand.index
+    i_index = generators.index
     D = demand.values  # total forecasted demand
     F = renewables.values
     Gmin = generators['Minimum power output'].values
@@ -464,7 +466,7 @@ def build(demand, renewables, generators, target_checkpoints, block_loading_targ
 
     constraints_list, constraint_dict = define_constraints(u, c, p, d,
                                                            F, D, Gmax, Gmin, Cminon, Cminoff, target_checkpoints,
-                                                           t_index)
+                                                           t_index, i_index)
 
     # Define the problem objective
     obj = cp.Minimize(
