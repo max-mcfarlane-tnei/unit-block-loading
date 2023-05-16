@@ -77,13 +77,18 @@ def define_block_load_targets(demand):
 
     return target_checkpoints, block_loading_targets
 
-
-def run_basic_example():
+def prepare_inputs():
     """
-    Runs a basic unit commitment case optimization process.
-    :return:
-    """
+    Prepares inputs for the application by retrieving data, sampling generators, and calculating relevant values.
 
+    Returns:
+    tuple: A tuple containing the following prepared inputs:
+        - demand (DataFrame): Historic demand data limited to a specified time period.
+        - renewables (DataFrame): Total renewable power output calculated from wind and solar data.
+        - generators (DataFrame): Sampled generators based on the number of generators and total capacity.
+        - target_checkpoints (list): Checkpoints for defining block loading targets.
+        - block_loading_targets (DataFrame): Block loading targets for the demand.
+    """
     # Get historic wind, solar, and demand data
     wind, solar, demand = io_.get_historic_demand_wind_solar()
 
@@ -105,17 +110,48 @@ def run_basic_example():
     # Compile block loading targets
     target_checkpoints, block_loading_targets = define_block_load_targets(demand)
 
+    return demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets
+
+
+def process_outputs(wind, solar, demand, generators, p, d):
+    """
+    Processes the outputs of the application by combining data and calculating net demand and net generation.
+
+    Parameters:
+        wind (DataFrame): Wind power data.
+        solar (DataFrame): Solar power data.
+        demand (DataFrame): Historic demand data.
+        generators (DataFrame): Sampled generators data.
+        p (DataFrame): Power output data of generators.
+        d (Series): Block demand data.
+
+    Returns:
+        DataFrame: A DataFrame containing the processed outputs, including net demand and net generation.
+    """
+    # Combine wind, solar, demand, and power output data into a single dataframe
+    active_power = pd.concat([wind, solar, demand], axis=1)
+    active_power = pd.concat([active_power, p.T], axis=1)
+
+    # Calculate net demand and net generation by summing the power output of all generators
+    active_power['block demand'] = d
+    active_power['net demand'] = demand - wind - solar
+    active_power['net generation'] = active_power[generators['Name']].sum(axis=1)
+
+    return active_power
+
+
+def run_basic_example():
+    """
+    Runs a basic unit commitment case optimization process.
+    :return:
+    """
+    demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets = prepare_inputs()
+
     # Build the optimization problem with demand, renewables, generators and block loading targets
     prob, u, c, p, d = optimisation.build(demand, renewables, generators, target_checkpoints, block_loading_targets)
 
     # Solve the optimization problem
     prob, u, c, p, d = optimisation.solve(prob, u, c, p, d)
-
-    # Check if the problem has an optimal solution
-    if prob.status != 'optimal':
-        # Relax the constraints if the problem is infeasible
-        constraint_status, constraint_group_problem = optimisation.relax_constraints(prob)
-        exit()
 
     # Create a dataframe for block demand
     d = pd.Series(d.value, index=demand.index)
@@ -127,14 +163,7 @@ def run_basic_example():
     p = pd.DataFrame(p.value, index=generators['Name'], columns=demand.index)
     c = pd.DataFrame(c.value, index=generators['Name'], columns=demand.index)
 
-    # Combine wind, solar, demand, and power output data into a single dataframe
-    active_power = pd.concat([wind, solar, demand], axis=1)
-    active_power = pd.concat([active_power, p.T], axis=1)
-
-    # Calculate net demand and net generation by summing the power output of all generators
-    active_power['block demand'] = d
-    active_power['net demand'] = demand - wind - solar
-    active_power['net generation'] = active_power[generators['Name']].sum(axis=1)
+    active_power = process_outputs(wind, solar, demand, generators, p, d)
 
     visualise(u, active_power, generators['Name'].tolist())
 
