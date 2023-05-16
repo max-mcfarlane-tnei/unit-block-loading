@@ -3,6 +3,7 @@ import os
 import pandas as pd
 
 import config
+import graph_utils
 import io_
 import optimisation
 from config import *
@@ -77,6 +78,7 @@ def define_block_load_targets(demand):
 
     return target_checkpoints, block_loading_targets
 
+
 def prepare_inputs():
     """
     Prepares inputs for the application by retrieving data, sampling generators, and calculating relevant values.
@@ -84,6 +86,8 @@ def prepare_inputs():
     Returns:
     tuple: A tuple containing the following prepared inputs:
         - demand (DataFrame): Historic demand data limited to a specified time period.
+        - wind (DataFrame): Historic wind power data limited to a specified time period.
+        - solar (DataFrame): Historic solar power data limited to a specified time period.
         - renewables (DataFrame): Total renewable power output calculated from wind and solar data.
         - generators (DataFrame): Sampled generators based on the number of generators and total capacity.
         - target_checkpoints (list): Checkpoints for defining block loading targets.
@@ -98,10 +102,12 @@ def prepare_inputs():
     # Sample generators based on the number of generators ('N') and total capacity
     generators = io_.sample_generators(num_generators=N, total_capacity=(demand - wind - solar).max())
 
-    # Plot the active power generation using wind, solar, and demand data
-    # active_power_plot = io_.plot_active_power_generation(wind, solar, demand)
+    lines = io_.generate_transmission_lines(generators)
 
-    # Uncomment the following line if you want to show the active power plot
+    # # Plot the active power generation using wind, solar, and demand data
+    # active_power_plot = graph_utils.plot_active_power_generation(wind, solar, demand)
+    #
+    # # Uncomment the following line if you want to show the active power plot
     # active_power_plot.show()
 
     # Calculate the total renewable power output by summing wind and solar power

@@ -1,9 +1,6 @@
 import io
 import os
 
-import plotly.graph_objs as go
-import numpy as np
-import pytz
 import requests
 
 DIR = os.path.dirname(__file__)
@@ -37,11 +34,20 @@ def get_ngeso_wind_day_ahead():
 
 def get_historic_demand_wind_solar():
     """
-    Retrieves the National Grid ESO demand forecast data for the next two days ahead from the API.
+    Retrieves historic demand, wind, and solar data from National Grid ESO public API.
 
     Returns:
-    ----------
-    Tuple[pd.Series, pd.Series, pd.Series]: A tuple containing the demand forecast data for wind, solar, and overall demand.
+    Tuple[pd.Series, pd.Series, pd.Series]: A tuple containing the demand forecast data for wind, solar,
+    and overall demand.
+
+    Notes:
+    - The function retrieves the data from a specific URL.
+    - If the data has been previously retrieved and saved, it loads it from file instead of making a new request.
+    - The returned data is in the form of Pandas Series.
+    - The column names for wind, solar, and demand data are set accordingly.
+
+    Example:
+    >>> wind_data, solar_data, demand_data = get_historic_demand_wind_solar()
     """
     # Set the URL of the dataset
     url = 'https://data.nationalgrideso.com/backend/dataset/8f2fe0af-871c-488d-8bad-960426f24601/resource/bb44a1b5-75b1-4db2-8491-257f23385006/download/demanddata.csv'
@@ -52,9 +58,6 @@ def get_historic_demand_wind_solar():
     else:
         # Make the curl request using requests
         response = requests.get(url)
-
-        # Determine the encoding of the response content
-        encoding = response.encoding or 'utf-8'  # fallback to utf-8 if encoding not provided
 
         # Parse the CSV response into a DataFrame
         response_data = pd.read_csv(io.StringIO(response.text))
@@ -133,37 +136,26 @@ def generate_active_power_inputs():
 
 def sample_generators(num_generators=15, total_capacity=47000, min_percentage=0.) -> pd.DataFrame:
     """
-    Generate a pandas DataFrame with simulated data for a given number of power generators.
-     The DataFrame contains information on each generator's minimum and maximum power output, start-up cost,
-     fuel cost, minimum on-time, minimum off-time, and name.
+    Generates a pandas DataFrame with simulated data for a given number of power generators.
 
-    Parameters
-    ----------
-    num_generators : int, optional
-        The number of generators to simulate. Default is 15.
-    total_capacity : int, optional
-        The total capacity of all generators combined in MW. Default is 47000.
-    min_percentage : float, optional
-        The minimum power output of each generator as a percentage of its maximum output. Default is 0.
+    The DataFrame contains information on each generator's minimum and maximum power output, start-up cost,
+    fuel cost, minimum on-time, minimum off-time, and name.
 
-    Returns
-    -------
-    pd.DataFrame
-        A pandas DataFrame with the following columns:
-        - 'Name': str
-            The name of the generator.
-        - 'Minimum power output': float
-            The minimum power output of the generator in MW.
-        - 'Maximum power output': float
-            The maximum power output of the generator in MW.
-        - 'Start-up cost': int
-            The start-up cost of the generator in GBP.
-        - 'Fuel cost': int
-            The fuel cost of the generator in GBP/MWh.
-        - 'Minimum on-time': int
-            The minimum time the generator must run once it is started, in half hours.
-        - 'Minimum off-time': int
-            The minimum time the generator must be off once it is stopped, in half hours.
+    Parameters:
+    num_generators (int, optional): The number of generators to simulate. Default is 15.
+    total_capacity (int, optional): The total capacity of all generators combined in MW. Default is 47000.
+    min_percentage (float, optional): The minimum power output of each generator as a percentage of its maximum output.
+        Default is 0.
+
+    Returns:
+    pd.DataFrame: A pandas DataFrame with the following columns:
+        - 'Name' (str): The name of the generator.
+        - 'Minimum power output' (float): The minimum power output of the generator in MW.
+        - 'Maximum power output' (float): The maximum power output of the generator in MW.
+        - 'Start-up cost' (int): The start-up cost of the generator in GBP.
+        - 'Fuel cost' (int): The fuel cost of the generator in GBP/MWh.
+        - 'Minimum on-time' (int): The minimum time the generator must run once it is started, in half hours.
+        - 'Minimum off-time' (int): The minimum time the generator must be off once it is stopped, in half hours.
 
     """
     np.random.seed(230504)
@@ -195,53 +187,68 @@ def sample_generators(num_generators=15, total_capacity=47000, min_percentage=0.
     return generators
 
 
-def plot_active_power_generation(wind: pd.Series, solar: pd.Series, demand: pd.Series) -> None:
+import numpy as np
+import pandas as pd
+
+
+def generate_transmission_lines(generators, num_loads=3, min_load_capacity=1000, max_load_capacity=5000,
+                                min_line_capacity=100, max_line_capacity=1000):
     """
-    Plots the total demand, wind generation, solar generation and net demand.
+    Generates a set of transmission lines connecting the generators to a set of loads.
 
     Parameters:
-    ----------
-    wind : pd.Series
-        A pandas Series containing the wind generation data in MW.
-
-    solar : pd.Series
-        A pandas Series containing the solar generation data in MW.
-
-    demand : pd.Series
-        A pandas Series containing the total demand data in MW.
+    generators (pd.DataFrame): DataFrame containing generator information.
+    num_loads (int, optional): The number of loads to connect the generators to. Default is 3.
+    min_load_capacity (int, optional): The minimum capacity of a load in MVA. Default is 1000.
+    max_load_capacity (int, optional): The maximum capacity of a load in MVA. Default is 5000.
+    min_line_capacity (int, optional): The minimum capacity of a transmission line in MVA. Default is 100.
+    max_line_capacity (int, optional): The maximum capacity of a transmission line in MVA. Default is 1000.
 
     Returns:
-    ----------
-    plotly.graph_objs._figure.Figure: A plotly figure object containing the plot.
+    pd.DataFrame: A DataFrame with the following columns:
+        - 'Generator': str: The name of the generator.
+        - 'Transmission Line': str: The name of the transmission line.
+        - 'Capacity': int: The capacity of the transmission line in MVA.
+        - 'Load': str: The name of the load the transmission line is connected to.
+
     """
+    generator_names = generators['Name'].tolist()
+    num_generators = len(generator_names)
 
-    # Set the time period to smooth over
-    smooth_window = '24h'
+    loads = [f"Load {i+1}" for i in range(num_loads)]
 
-    # Apply rolling mean smoothing to the demand, wind, solar, and net series
-    smoothed_demand = demand.rolling(smooth_window).mean()
-    smoothed_wind = wind.rolling(smooth_window).mean()
-    smoothed_solar = solar.rolling(smooth_window).mean()
-    smoothed_net = (demand - wind - solar).rolling(smooth_window).mean()
+    transmission_lines = []
 
-    # Create a new plotly figure object
-    fig = go.Figure()
+    for generator in generator_names:
+        for load in loads:
+            # Generate a random capacity for the transmission line
+            capacity = np.random.randint(min_line_capacity, max_line_capacity + 1)
 
-    # Add each of the series to the figure as a line plot
-    fig.add_trace(go.Scatter(x=demand.index, y=smoothed_demand, mode='lines', name='Total Demand'))
-    fig.add_trace(go.Scatter(x=wind.index, y=smoothed_wind, mode='lines', name='Wind Generation'))
-    fig.add_trace(go.Scatter(x=solar.index, y=smoothed_solar, mode='lines', name='Solar Generation'))
-    fig.add_trace(go.Scatter(x=demand.index, y=smoothed_net, mode='lines', name='Net Demand'))
+            # Create a unique name for the transmission line
+            transmission_line_name = f"{generator} to {load}"
 
-    # Update the layout of the figure with appropriate titles and axis labels
-    fig.update_layout(title='Total Demand and Renewable Energy Input', xaxis_title='Time', yaxis_title='Power (MW)',
-                      legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+            # Create a dictionary for the transmission line
+            line_dict = {'from': generator, 'Transmission Line': transmission_line_name,
+                         'Capacity': capacity, 'to': load}
 
-    # Show the figure
-    # fig.show()
+            # Add the transmission line dictionary to the list
+            transmission_lines.append(line_dict)
 
-    # Return the figure object
-    return fig
+    # Add transmission lines connecting each generator to a random load
+    for generator in generator_names:
+        random_load = np.random.choice(loads)
+        capacity = np.random.randint(min_line_capacity, max_line_capacity + 1)
+        transmission_line_name = f"{generator} to {random_load}"
+        line_dict = {'from': generator, 'Transmission Line': transmission_line_name,
+                     'Capacity': capacity, 'to': random_load}
+        transmission_lines.append(line_dict)
+
+    # Concatenate the list of dictionaries into a DataFrame
+    transmission_lines_df = pd.DataFrame(transmission_lines)
+
+    return transmission_lines_df
+
+
 
 
 

@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 import plotly.subplots
-from plotly import express as px
+from plotly import express as px, graph_objs as go
 
 DIR = os.path.dirname(__file__)
 
@@ -100,3 +100,52 @@ def visualise(u, active_power, generators):
 
     # Show the subplot containing both the decision and active power charts
     subplots.show()
+
+
+def plot_active_power_generation(wind: pd.Series, solar: pd.Series, demand: pd.Series) -> None:
+    """
+    Plots the total demand, wind generation, solar generation and net demand.
+
+    Parameters:
+    ----------
+    wind : pd.Series
+        A pandas Series containing the wind generation data in MW.
+
+    solar : pd.Series
+        A pandas Series containing the solar generation data in MW.
+
+    demand : pd.Series
+        A pandas Series containing the total demand data in MW.
+
+    Returns:
+    ----------
+    plotly.graph_objs._figure.Figure: A plotly figure object containing the plot.
+    """
+
+    # Set the time period to smooth over
+    smooth_window = '24h'
+
+    # Apply rolling mean smoothing to the demand, wind, solar, and net series
+    smoothed_demand = demand.rolling(smooth_window).mean()
+    smoothed_wind = wind.rolling(smooth_window).mean()
+    smoothed_solar = solar.rolling(smooth_window).mean()
+    smoothed_net = (demand - wind - solar).rolling(smooth_window).mean()
+
+    # Create a new plotly figure object
+    fig = go.Figure()
+
+    # Add each of the series to the figure as a line plot
+    fig.add_trace(go.Scatter(x=demand.index, y=smoothed_demand, mode='lines', name='Total Demand'))
+    fig.add_trace(go.Scatter(x=wind.index, y=smoothed_wind, mode='lines', name='Wind Generation'))
+    fig.add_trace(go.Scatter(x=solar.index, y=smoothed_solar, mode='lines', name='Solar Generation'))
+    fig.add_trace(go.Scatter(x=demand.index, y=smoothed_net, mode='lines', name='Net Demand'))
+
+    # Update the layout of the figure with appropriate titles and axis labels
+    fig.update_layout(title='Total Demand and Renewable Energy Input', xaxis_title='Time', yaxis_title='Power (MW)',
+                      legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+
+    # Show the figure
+    # fig.show()
+
+    # Return the figure object
+    return fig
