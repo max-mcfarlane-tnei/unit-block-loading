@@ -435,6 +435,9 @@ def build(demand, renewables, generators, target_checkpoints, block_loading_targ
     - c: Decision variable representing the start-up status of generators.
     - p: Decision variable representing the power output of generators.
     - d: Variable representing block load.
+
+        Example:
+    >>> prob, u, c, p, d = build(demand, renewables, generators, target_checkpoints, block_loading_targets)
     """
 
     # Extract the data as numpy arrays
@@ -479,19 +482,6 @@ def build(demand, renewables, generators, target_checkpoints, block_loading_targ
 
     prob.constraint_dict = constraint_dict
 
-    return prob, u, c, p, d
-
-
-def solve(prob, u, c, p, d, verbose=True):
-    """Method for solving."""
-
-    prob.solve(solver=cp.CBC, verbose=verbose)
-
-    # # Print the optimal solution
-    # print("Minimum cost: ", prob.value)
-    # print("On/off status: ", u.value)
-    # print("Start-up status: ", c.value)
-    # print("Power output: ", p.value)
     return prob, u, c, p, d
 
 
@@ -593,3 +583,23 @@ def relax_constraints(prob, verbose=False):
 
     # Return the dictionary of modified problem instances
     return constraint_status, constraint_group_problem
+
+
+def solve(prob, u, c, p, d, verbose=True):
+    """Method for solving."""
+
+    prob.solve(solver=cp.CBC, verbose=verbose)
+
+    # # Print the optimal solution
+    # print("Minimum cost: ", prob.value)
+    # print("On/off status: ", u.value)
+    # print("Start-up status: ", c.value)
+    # print("Power output: ", p.value)
+
+    # Check if the problem has an optimal solution
+    if prob.status != 'optimal':
+        # Relax the constraints if the problem is infeasible
+        constraint_status, constraint_group_problem = relax_constraints(prob)
+        exit()
+
+    return prob, u, c, p, d
