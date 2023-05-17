@@ -170,10 +170,10 @@ def sample_generators(num_generators=15, total_capacity=47000, min_percentage=0.
     # Generate random capacities for each generator
     Gmax = np.random.randint(1000, 5000, size=num_generators).astype('float64')
 
-    # Compute the scaling factor to normalize the capacities to the total capacity
+    # Compute the scaling factor to normalise the capacities to the total capacity
     scaling_factor = (total_capacity / np.sum(Gmax)).astype('float64')
 
-    # Normalize the capacities
+    # Normalise the capacities
     Gmax *= scaling_factor
 
     Gmin = Gmax * min_percentage  # Minimum power output

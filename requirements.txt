@@ -8,3 +8,4 @@ openpyxl
 dash
 bokeh
 requests
+dash_bootstrap_components

@@ -3,6 +3,7 @@ import collections
 import cvxpy as cp
 import numpy as np
 import config
+from exceptions import InfeasibleSolutionException
 
 from logger import logger
 
@@ -409,7 +410,7 @@ def define_constraints(u, c, p, d, F, D, Gmax, Gmin, Cminon, Cminoff, Dtargets, 
     return constraints, constraints_dict
 
 
-def build(demand, renewables, generators, target_checkpoints, block_loading_targets):
+def build(demand, renewables, generators, target_checkpoints, block_loading_targets, t):
     """
     Method for building optimization model.
 
@@ -466,7 +467,7 @@ def build(demand, renewables, generators, target_checkpoints, block_loading_targ
 
     constraints_list, constraint_dict = define_constraints(u, c, p, d,
                                                            F, D, Gmax, Gmin, Cminon, Cminoff, target_checkpoints,
-                                                           t_index, i_index)
+                                                           t_index, i_index, t)
 
     # Define the problem objective
     obj = cp.Minimize(
@@ -598,11 +599,12 @@ def solve(prob, u, c, p, d, verbose=True, debug=False):
     # print("Start-up status: ", c.value)
     # print("Power output: ", p.value)
 
+
     # Check if the problem has an optimal solution
     if prob.status != 'optimal':
         if debug:
             # Relax the constraints if the problem is infeasible
             constraint_status, constraint_group_problem = relax_constraints(prob)
-        exit()
+        raise InfeasibleSolutionException
 
     return prob, u, c, p, d
