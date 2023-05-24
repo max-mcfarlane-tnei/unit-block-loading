@@ -131,7 +131,7 @@ dashapp.index_string = '''
 <html>
     <head>
         {%metas%}
-        <title>{%title%}</title>
+        <title>Unit Block Loading Prototype</title>
         {%favicon%}
         {%css%}
     </head>
