@@ -179,4 +179,3 @@ def update_figure(days, generators, target_60, target_100, block_limit):
 
 app = dashapp.server
 
-dashapp.run_server(debug=False)
