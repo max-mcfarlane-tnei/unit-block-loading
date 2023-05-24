@@ -1,6 +1,7 @@
 cvxpy
 pandas
 numpy
+gunicorn
 cylp
 matplotlib
 plotly
