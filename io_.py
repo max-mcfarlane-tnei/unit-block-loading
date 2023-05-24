@@ -131,7 +131,7 @@ def generate_active_power_inputs(DEMAND_AMPLITUDE, WIND_CAPACITY, T):
     return demand, wind
 
 
-def sample_generators(num_generators=15, total_capacity=47000, min_percentage=0.) -> pd.DataFrame:
+def sample_generators(num_generators=15, total_capacity=47000, min_percentage=0.15) -> pd.DataFrame:
     """
     Generate a pandas DataFrame with simulated data for a given number of power generators.
      The DataFrame contains information on each generator's minimum and maximum power output, start-up cost,

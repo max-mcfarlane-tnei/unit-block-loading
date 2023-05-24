@@ -52,7 +52,10 @@ def run_basic_example(
 
     active_power = process_outputs(wind, solar, demand, generators, p, d)
 
-    decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig = visualise(u, p, active_power, generators,
-                                                            target_checkpoints, block_limit, generators_inactive)
+    decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig = visualise(
+        u, p, active_power, generators,
+        target_checkpoints, block_limit,
+        generators_inactive
+    )
 
     return decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig
