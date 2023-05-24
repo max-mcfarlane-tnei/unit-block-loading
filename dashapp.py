@@ -12,7 +12,7 @@ from run import run_basic_example
 header_height = 8
 
 # Create the Dash application
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+dashapp = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 days = 6
 generators = 3
@@ -30,7 +30,7 @@ if not os.path.exists('./subplot_fig.p'):
 else:
     subplot_fig = pickle.load(open('./subplot_fig.p', 'rb'))
 
-app.layout = html.Div(
+dashapp.layout = html.Div(
     children=dbc.Row([
         html.H3("Block Loading Optimisation - Playground", style={
             "background-color": "#000936",
@@ -126,7 +126,7 @@ app.layout = html.Div(
     style={'overflow-y': 'auto', 'overflow-x': 'hidden'}  # Align elements vertically
 )
 
-app.index_string = '''
+dashapp.index_string = '''
 <!DOCTYPE html>
 <html>
     <head>
@@ -153,7 +153,7 @@ input_components = [
     "target-100-slider",
     "block-limit-slider"
 ]
-@app.callback(
+@dashapp.callback(
     [
         Output("my-graph", "figure"),
         Output("footer", "children"),
@@ -177,6 +177,6 @@ def update_figure(days, generators, target_60, target_100, block_limit):
     return dash.no_update, ""
 
 
-server = app.server
+app = dashapp.server
 
-app.run_server(debug=False)
+dashapp.run_server(debug=False)
