@@ -153,6 +153,8 @@ input_components = [
     "target-100-slider",
     "block-limit-slider"
 ]
+
+
 @dashapp.callback(
     [
         Output("my-graph", "figure"),
@@ -177,5 +179,5 @@ def update_figure(days, generators, target_60, target_100, block_limit):
     return dash.no_update, ""
 
 
+dashapp.title = 'Unit Block Loading'
 app = dashapp.server
-
