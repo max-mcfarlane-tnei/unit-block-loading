@@ -18,7 +18,7 @@ days = 6
 generators = 3
 target_60 = 2
 target_100 = 4
-block_limit = 500
+block_limit = 40
 min_operating_capacity = 0.15
 
 # if True or not os.path.exists('./subplot_fig.p'):
@@ -109,10 +109,10 @@ dashapp.layout = html.Div(
                             dcc.Slider(
                                 id="block-limit-slider",
                                 min=0,
-                                max=1000,
-                                step=100,
+                                max=100,
+                                step=5,
                                 value=block_limit,
-                                marks={i: str(i) for i in range(0, 1001, 200)},
+                                marks={i: str(i) for i in range(0, 101, 5)},
                             ),
                             html.Br(),
                             html.Label("Minimum operating capacity"),
