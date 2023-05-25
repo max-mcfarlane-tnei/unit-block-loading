@@ -15,7 +15,8 @@ def run_basic_example(
         n=config.N,
         restart_targets=config.RESTART_TARGETS,
         block_limit=config.BLOCK_LIMIT,
-        generators_inactive=0
+        generators_inactive=0,
+        min_operating_capacity=0.15,
 ):
     """
     Runs a basic unit commitment case optimization process.
@@ -31,7 +32,7 @@ def run_basic_example(
 
     """
     demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets = prepare_inputs(
-        t, n, restart_targets, block_limit, generators_inactive
+        t, n, restart_targets, block_limit, generators_inactive, min_operating_capacity
     )
 
     # Build the optimization problem with demand, renewables, generators and block loading targets

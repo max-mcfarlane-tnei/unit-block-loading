@@ -19,12 +19,13 @@ generators = 3
 target_60 = 2
 target_100 = 4
 block_limit = 500
+min_operating_capacity = 0.15
 
 # if True or not os.path.exists('./subplot_fig.p'):
 if not os.path.exists('./subplot_fig.p'):
     decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig = run_basic_example(
         t=48 * days, n=generators, restart_targets=((target_60, 0.6), (target_100, 1)),
-        block_limit=block_limit
+        block_limit=block_limit, min_operating_capacity=min_operating_capacity
     )
     pickle.dump(subplot_fig, open('./subplot_fig.p', 'wb'))
 else:
@@ -113,6 +114,16 @@ dashapp.layout = html.Div(
                                 value=block_limit,
                                 marks={i: str(i) for i in range(0, 1001, 200)},
                             ),
+                            html.Br(),
+                            html.Label("Minimum operating capacity"),
+                            dcc.Slider(
+                                id="min-capacity-slider",
+                                min=0,
+                                max=100,
+                                step=1,
+                                value=int(min_operating_capacity*100),
+                                marks={i: str(i) for i in range(0, 101, 10)},
+                            ),
                         ]
                     ),
                     dbc.CardFooter(id='footer'),
@@ -151,7 +162,8 @@ input_components = [
     "generators-slider",
     "target-60-slider",
     "target-100-slider",
-    "block-limit-slider"
+    "block-limit-slider",
+    "min-capacity-slider",
 ]
 
 
@@ -165,13 +177,15 @@ input_components = [
     ],
     prevent_initial_callbacks=True
 )
-def update_figure(days, generators, target_60, target_100, block_limit):
+def update_figure(days_, generators_, target_60_, target_100_, block_limit_, min_operating_capacity_):
     ctx = dash.callback_context
     triggered_item = ctx.triggered[0]["prop_id"].split(".")[0]
     if triggered_item in input_components:
         try:
             decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig = run_basic_example(
-                t=48 * days, n=generators, restart_targets=((target_60, 0.6), (target_100, 1)), block_limit=block_limit
+                t=48 * days_, n=generators_, restart_targets=((target_60_, 0.6), (target_100_, 1)),
+                block_limit=block_limit_,
+                min_operating_capacity=min_operating_capacity_/100
             )
         except exceptions.InfeasibleSolutionException as e:
             return dash.no_update, "Infeasible Solution"

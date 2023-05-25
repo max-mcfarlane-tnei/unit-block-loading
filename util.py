@@ -83,7 +83,7 @@ def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limi
 
 
 def prepare_inputs(t=config.T, n=config.N, targets=config.RESTART_TARGETS, block_limit=config.BLOCK_LIMIT,
-                   generators_inactive=0):
+                   generators_inactive=0, min_operating_capacity=0.15):
     """
     Prepare inputs for the application by retrieving data, sampling generators, and calculating relevant values.
 
@@ -105,11 +105,17 @@ def prepare_inputs(t=config.T, n=config.N, targets=config.RESTART_TARGETS, block
     # Get historic wind, solar, and demand data
     wind, solar, demand = io_.get_historic_demand_wind_solar()
 
+    SCO_POP = 5.5e6
+    UK_POP = 67e6
+
+    proportion = SCO_POP / UK_POP
+
     # Limit the data to a certain time period specified by t
-    wind, solar, demand = wind.iloc[:t], solar.iloc[:t], demand.iloc[:t]
+    wind, solar, demand = wind.iloc[:t]*proportion, solar.iloc[:t]*proportion, demand.iloc[:t]*proportion
 
     # Sample generators based on the number of generators ('N') and total capacity
-    generators = io_.sample_generators(num_generators=n, total_capacity=(demand - wind - solar).max())
+    generators = io_.sample_generators(num_generators=n, total_capacity=(demand - wind - solar).max(),
+                                       min_percentage=min_operating_capacity)
 
     np.random.seed(230516)
 
