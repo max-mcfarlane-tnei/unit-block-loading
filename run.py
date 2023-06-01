@@ -26,9 +26,11 @@ def run_basic_example(
     n (int, optional): The number of generators to consider for the optimization process. Default is config.N.
     restart_targets (list, optional): List of restart targets for block loading. Default is config.RESTART_TARGETS.
     block_limit (float, optional): The block limit for block loading. Default is config.BLOCK_LIMIT.
+    generators_inactive (int, optional): The number of inactive generators. Default is 0.
+    min_operating_capacity (float, optional): The minimum operating capacity for generators. Default is 0.15.
 
     Returns:
-    None
+    tuple: A tuple containing four figures - decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig.
 
     """
     demand, wind, solar, renewables, generators, target_checkpoints, block_loading_targets = prepare_inputs(
@@ -59,4 +61,4 @@ def run_basic_example(
         generators_inactive
     )
 
-    return decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig
+    return decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c

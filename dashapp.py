@@ -23,7 +23,7 @@ min_operating_capacity = 0.15
 
 # if True or not os.path.exists('./subplot_fig.p'):
 if not os.path.exists('./subplot_fig.p'):
-    decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig = run_basic_example(
+    decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
         t=48 * days, n=generators, restart_targets=((target_60, 0.6), (target_100, 1)),
         block_limit=block_limit, min_operating_capacity=min_operating_capacity
     )
@@ -182,7 +182,7 @@ def update_figure(days_, generators_, target_60_, target_100_, block_limit_, min
     triggered_item = ctx.triggered[0]["prop_id"].split(".")[0]
     if triggered_item in input_components:
         try:
-            decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig = run_basic_example(
+            decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
                 t=48 * days_, n=generators_, restart_targets=((target_60_, 0.6), (target_100_, 1)),
                 block_limit=block_limit_,
                 min_operating_capacity=min_operating_capacity_/100
