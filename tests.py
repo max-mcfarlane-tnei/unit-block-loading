@@ -26,7 +26,8 @@ class TestRunBasicExample(unittest.TestCase):
         )
 
         # pickle.dump(active_power, open('.test_cache.p', 'wb'))
-        comparison_data = pickle.load(open('.test_cache.p', 'rb'))
+        with open('.test_cache.p', 'rb') as f:
+            comparison_data = pickle.load(f)
 
         self.assertTrue(active_power.equals(comparison_data))
 
