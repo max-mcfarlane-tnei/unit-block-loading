@@ -114,8 +114,11 @@ def prepare_inputs(t=config.T, n=config.N, targets=config.RESTART_TARGETS, block
     wind, solar, demand = wind.iloc[:t]*proportion, solar.iloc[:t]*proportion, demand.iloc[:t]*proportion
 
     # Sample generators based on the number of generators ('N') and total capacity
-    generators = io_.sample_generators(num_generators=n, total_capacity=(demand - wind - solar).max(),
-                                       min_percentage=min_operating_capacity)
+    generators = io_.sample_generators(
+        num_generators=n,
+        total_capacity=(demand - wind - solar).max(),
+        min_percentage=min_operating_capacity
+    )
 
     np.random.seed(230516)
 
