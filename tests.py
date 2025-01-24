@@ -25,7 +25,7 @@ class TestRunBasicExample(unittest.TestCase):
             min_operating_capacity=0.15
         )
 
-        # pickle.dump(active_power, open('.test_cache.p', 'wb'))
+        #pickle.dump(active_power, open('.test_cache.p', 'wb'))
         comparison_data = pickle.load(open('.test_cache.p', 'rb'))
 
         self.assertTrue(active_power.equals(comparison_data))
