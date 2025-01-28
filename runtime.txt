@@ -1,0 +1,2 @@
+"Python 3.11.8"
+To test you python version run " python --version" in the terminal
