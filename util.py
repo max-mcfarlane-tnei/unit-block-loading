@@ -6,6 +6,7 @@ import pandas as pd
 import config
 import io_
 
+
 DIR = os.path.dirname(__file__)
 
 
@@ -57,10 +58,10 @@ def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limi
 
         # Create a series containing the target datetime and volume
         target_checkpoints_ = pd.Series({
-            'time': target_datetime,
-            'volume': target_volume,
-            'block_limit': block_limit
-        })
+            'time': pd.Timestamp(target_datetime),  # Ensures datetime dtype
+            'volume': float(target_volume),  # Ensures float dtype
+            'block_limit': float(block_limit)  # Ensures float dtype
+        }, dtype=object)  # Explicitly set dtype to object to avoid inference
 
         # Append the block loading targets series to the list
         target_checkpoints.append(target_checkpoints_)
@@ -75,7 +76,7 @@ def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limi
     _block_target_t = [
         ((demand.index < r.Index), r.volume) for r in target_checkpoints.sort_index(ascending=False).itertuples()
     ]
-    block_loading_targets = pd.Series(index=demand.index, data=[0] * len(demand))
+    block_loading_targets = pd.Series(index=demand.index, data=[0] * len(demand), dtype='float64') # Explicitly setting the dytpe here removes FutureWarning of incompatible dtype
     for idx_mask, block_target_ in _block_target_t:
         block_loading_targets[idx_mask] = block_target_
 
@@ -160,6 +161,8 @@ def process_outputs(wind, solar, demand, generators, p, d):
     # Calculate net demand and net generation by summing the power output of all generators
     active_power['block demand'] = d
     active_power['net demand'] = demand - wind - solar
-    active_power['net generation'] = active_power[generators['Name']].sum(axis=1)
+
+    # Ensure dtypes are explicitly set
+    active_power = active_power.infer_objects()
 
     return active_power

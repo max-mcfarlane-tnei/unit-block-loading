@@ -24,11 +24,26 @@ class TestRunBasicExample(unittest.TestCase):
             generators_inactive=0,
             min_operating_capacity=0.15
         )
+        # The with statement means we do not have to close the file, removing ResourceWarning Unclosed file
+        with open('.test_cache.p', 'wb') as f:
+            pickle.dump(active_power, f)
 
-        #pickle.dump(active_power, open('.test_cache.p', 'wb'))
-        comparison_data = pickle.load(open('.test_cache.p', 'rb'))
+        # Also add with statement for the read file to remove Unclosed file error
+        with open('.test_cache.p', 'rb') as f:
+            comparison_data = pickle.load(f)
 
         self.assertTrue(active_power.equals(comparison_data))
+
+import warnings
+import traceback
+
+# Custom warning handler to include tracebacks
+def custom_warn_handler(message, category, filename, lineno, file=None, line=None):
+    print(f"Warning: {message}")
+    traceback.print_stack()
+
+warnings.showwarning = custom_warn_handler
+warnings.simplefilter('always', FutureWarning)
 
 if __name__ == '__main__':
     unittest.main()
