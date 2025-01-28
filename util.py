@@ -67,10 +67,10 @@ def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limi
         target_checkpoints.append(target_checkpoints_)
 
     # Concatenate the block loading targets list into a single DataFrame
-    target_checkpoints = pd.concat(target_checkpoints, axis=1)
+    target_checkpoints = pd.concat(target_checkpoints, axis=1).T
 
     # Transpose the DataFrame and set the 'time' column as the index
-    target_checkpoints = target_checkpoints.T.set_index('time')
+    target_checkpoints = target_checkpoints.set_index('time')
 
     # Create a block loading targets series per timestep
     _block_target_t = [

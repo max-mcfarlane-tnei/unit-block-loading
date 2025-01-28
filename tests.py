@@ -1,9 +1,12 @@
+import pickle
 import unittest
 
 import config
 from run import run_basic_example
-import pickle
-import pandas as pd
+import warnings
+
+# Ensure warnings are shown during tests
+warnings.simplefilter('always', FutureWarning)
 
 
 class TestRunBasicExample(unittest.TestCase):
@@ -34,16 +37,6 @@ class TestRunBasicExample(unittest.TestCase):
 
         self.assertTrue(active_power.equals(comparison_data))
 
-import warnings
-import traceback
-
-# Custom warning handler to include tracebacks
-def custom_warn_handler(message, category, filename, lineno, file=None, line=None):
-    print(f"Warning: {message}")
-    traceback.print_stack()
-
-warnings.showwarning = custom_warn_handler
-warnings.simplefilter('always', FutureWarning)
-
 if __name__ == '__main__':
-    unittest.main()
+    warnings.simplefilter('always', FutureWarning)
+    unittest.main(warnings='always')
