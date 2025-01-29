@@ -185,7 +185,9 @@ def update_figure(days_, generators_, target_60_, target_100_, block_limit_, min
     if triggered_item in input_components:
         try:
             decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
-                t=48 * days_, n=generators_, restart_targets=((target_60_, 0.6), (target_100_, 1)),
+                t=48 * days_,
+                n=generators_,
+                restart_targets=((target_60_, 0.6), (target_100_, 1)),
                 block_limit=block_limit_,
                 min_operating_capacity=min_operating_capacity_/100
             )
