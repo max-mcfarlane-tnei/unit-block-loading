@@ -54,6 +54,6 @@ This repository is maintained by Max McFarlane.
 
 Supporting developer
 
-- Email: [Oscar.hlustik@tneigroup.com](mailto:oscar.hlustik@tneigroup.com) 
+- Email: [oscar.hlustik@tneigroup.com](mailto:oscar.hlustik@tneigroup.com) 
 
 If you have any questions or feedback, please contact the maintainer.
