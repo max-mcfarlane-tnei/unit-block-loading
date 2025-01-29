@@ -39,6 +39,9 @@ class TestRunBasicExample(unittest.TestCase):
         self.assertTrue(active_power.equals(comparison_data))
 
     def test_constraints(self):
+        """
+        Test for demand = generation at a given timestamp
+        """
         decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
             t=config.T,
             n=config.N,
