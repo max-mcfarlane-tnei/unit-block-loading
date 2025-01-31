@@ -1,6 +1,6 @@
 import os.path
 import pickle
-
+import numpy as np
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc
@@ -14,12 +14,21 @@ from run import run_basic_example
 
 # Have all the constants outside of main, capitalise them to align with PEP 8
 HEADER_HEIGHT = 8
+
 DAYS = 6
 GENERATORS = 3
 TARGET_60 = 2
 TARGET_100 = 4
 BLOCK_LIMIT = 40
 MIN_OPERATING_CAPACITY = 0.15
+
+#DAYS = np.random.randint(1, 11)
+#GENERATORS = np.random.randint(1, 8)
+#TARGET_60 = np.random.randint(0, 4)
+#TARGET_100 = np.random.randint(4, 6)
+#BLOCK_LIMIT = np.random.randint(30, 80)
+#MIN_OPERATING_CAPACITY = 0.15
+
 
 
 # Create the Dash application
