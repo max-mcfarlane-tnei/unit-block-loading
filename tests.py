@@ -57,16 +57,15 @@ class TestRunBasicExample(unittest.TestCase):
                                     #At the first few time stamps generation > demand
 
         demand = active_power.loc[idx, 'block demand']
-        generator_0= active_power.loc[idx, 'Generator 0']
-        generator_1= active_power.loc[idx, 'Generator 1']
-        generator_2= active_power.loc[idx, 'Generator 2']
-        generator_3= active_power.loc[idx, 'Generator 3']
-        generator_4= active_power.loc[idx, 'Generator 4']
+
         solar = active_power.loc[idx, 'solar']
         wind = active_power.loc[idx, 'wind']
 
+        gross_generation = solar + wind
 
-        gross_generation = solar + wind + generator_0 + generator_1 + generator_2 + generator_3 + generator_4
+        for col in active_power.columns:
+            if col.startswith("Generator"):
+                gross_generation += active_power.loc[idx, col]
 
         self.assertAlmostEqual(gross_generation, demand)
 
