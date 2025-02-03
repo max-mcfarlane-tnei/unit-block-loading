@@ -48,7 +48,6 @@ class TestRunBasicExample(unittest.TestCase):
         with open('.test_cache.p', 'wb') as f:
             pickle.dump(active_power, f)
 
-
         # Also add with statement for the read file to remove Unclosed file error
         with open('.test_cache.p', 'rb') as f:
             comparison_data = pickle.load(f)
@@ -128,13 +127,28 @@ class TestRunBasicExample(unittest.TestCase):
         """
         _, cumulative_cost_fig, _, _, _, _ = self.results
 
-        # Extract cumulative cost data from the figure
+
         cumulative_cost_data = cumulative_cost_fig.data[0].y
 
         # Check that the cumulative cost is increasing
         self.assertTrue(
             all(cumulative_cost_data[i] <= cumulative_cost_data[i + 1] for i in range(len(cumulative_cost_data) - 1)),
             "Cumulative cost is not increasing over time.")
+
+    def test_minimum_operating_capacity(self):
+        """
+        Test that active generators meet or exceed their minimum operating capacity.
+        """
+        MIN_OPERATING_CAPACITY = 0.15
+        _, _, _, _, active_power, _ = self.results
+
+        for col in active_power.columns:
+            if col.startswith("Generator"):
+                generator_output = active_power[col]
+                # Check only for non-zero outputs
+                active_output = generator_output[generator_output > 0]
+                self.assertTrue((active_output >= MIN_OPERATING_CAPACITY).all(),
+                                f"Generator{col} does not meet minimum operating capacity.")
 
     def test_constraint_naming(self):
         """
@@ -143,7 +157,7 @@ class TestRunBasicExample(unittest.TestCase):
         This test ensures that the generated constraints retain their expected names,
         preventing unintended modifications.
         """
-        # Create dummy variables
+        #dummy variables
         d = cp.Variable(5)
         p = cp.Variable((2, 5))
         F = np.zeros(5)
