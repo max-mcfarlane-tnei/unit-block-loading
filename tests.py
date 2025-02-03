@@ -24,12 +24,11 @@ class TestRunBasicExample(unittest.TestCase):
     A test case for the run_basic_example function.
     """
 
-    def test_run_basic_example(self):
+    def setUp(self):
         """
-        Test the run_basic_example function.
+        Setup for unittest so we do not need this for every test.
         """
-        # Call the function
-        decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
+        self.results = run_basic_example(
             t=config.T,
             n=config.N,
             restart_targets=config.RESTART_TARGETS,
@@ -37,6 +36,14 @@ class TestRunBasicExample(unittest.TestCase):
             generators_inactive=0,
             min_operating_capacity=0.15
         )
+        self.active_power = self.results[4]
+
+    def test_run_basic_example(self):
+        """
+        Test the run_basic_example function.
+        """
+        # Call the function
+        decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = self.results
         # The with statement means we do not have to close the file, removing ResourceWarning Unclosed file
         with open('.test_cache.p', 'wb') as f:
             pickle.dump(active_power, f)
@@ -48,18 +55,11 @@ class TestRunBasicExample(unittest.TestCase):
 
         self.assertTrue(active_power.equals(comparison_data))
 
-    def test_constraints(self):
+    def test_demand_equals_generation(self):
         """
         Test for demand = generation at a given timestamp
         """
-        decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
-            t=config.T,
-            n=config.N,
-            restart_targets=config.RESTART_TARGETS,
-            block_limit=config.BLOCK_LIMIT,
-            generators_inactive=0,
-            min_operating_capacity=0.15
-        )
+        decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = self.results
 
         idx = active_power.index[2] #This is the time stamps in the data
                                     #The wind generation never goes to 0
@@ -82,14 +82,8 @@ class TestRunBasicExample(unittest.TestCase):
         """
         Test for initial demand equals zero
         """
-        decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = run_basic_example(
-            t=config.T,
-            n=config.N,
-            restart_targets=config.RESTART_TARGETS,
-            block_limit=config.BLOCK_LIMIT,
-            generators_inactive=0,
-            min_operating_capacity=0.15
-        )
+        decision_fig, cumulative_cost_fig, active_power_fig, subplot_fig, active_power, c = self.results
+
         idx = active_power.index[0] # Demand at the first timestamp
 
         initial_demand = active_power.loc[idx, 'block demand']
@@ -101,14 +95,8 @@ class TestRunBasicExample(unittest.TestCase):
         """
         Test that the block demand is always non-negative.
         """
-        _, _, _, _, active_power, _ = run_basic_example(
-            t=config.T,
-            n=config.N,
-            restart_targets=config.RESTART_TARGETS,
-            block_limit=config.BLOCK_LIMIT,
-            generators_inactive=0,
-            min_operating_capacity=0.15
-        )
+        _, _, _, _, active_power, _ = self.results
+
         demand = active_power['block demand']
 
         # Check if all block demand values are non-negative
@@ -119,14 +107,7 @@ class TestRunBasicExample(unittest.TestCase):
         Test that all generators (including solar and wind) are initially inactive.
         ISSUES with this, the wind is not inactive at the start ?
         """
-        _, _, _, _, active_power, _ = run_basic_example(
-            t=config.T,
-            n=config.N,
-            restart_targets=config.RESTART_TARGETS,
-            block_limit=config.BLOCK_LIMIT,
-            generators_inactive=0,
-            min_operating_capacity=0.15
-        )
+        _, _, _, _, active_power, _ = self.results
 
         # Check the initial power output of each generator
         for i in range(config.N):
@@ -145,14 +126,7 @@ class TestRunBasicExample(unittest.TestCase):
         """
         Test that the cumulative cost increases over time.
         """
-        _, cumulative_cost_fig, _, _, _, _ = run_basic_example(
-            t=config.T,
-            n=config.N,
-            restart_targets=config.RESTART_TARGETS,
-            block_limit=config.BLOCK_LIMIT,
-            generators_inactive=0,
-            min_operating_capacity=0.15
-        )
+        _, cumulative_cost_fig, _, _, _, _ = self.results
 
         # Extract cumulative cost data from the figure
         cumulative_cost_data = cumulative_cost_fig.data[0].y
