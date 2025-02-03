@@ -1,10 +1,19 @@
 import pickle
 import unittest
-from time import process_time_ns
-
 import config
 from run import run_basic_example
+from optimisation import (
+    _block_load_increase_constraint,
+    _block_load_decrease_constraint,
+    _demand_constraint,
+    BLOCK_DEMAND_INCREASE_CONSTRAINT_NAME,
+    BLOCK_DEMAND_DECREASE_CONSTRAINT_NAME,
+    DEMAND_CONSTRAINT_NAME,
+)
+import cvxpy as cp
 import warnings
+import numpy as np
+
 
 # Ensure warnings are shown during tests
 warnings.simplefilter('always', FutureWarning)
@@ -132,8 +141,51 @@ class TestRunBasicExample(unittest.TestCase):
         self.assertEqual(solar, 0, "Solar generator is not initially inactive.")
         #self.assertEqual(wind, 0, "Wind generator is not initially inactive.")
 
+    def test_cumulative_cost_increase(self):
+        """
+        Test that the cumulative cost increases over time.
+        """
+        _, cumulative_cost_fig, _, _, _, _ = run_basic_example(
+            t=config.T,
+            n=config.N,
+            restart_targets=config.RESTART_TARGETS,
+            block_limit=config.BLOCK_LIMIT,
+            generators_inactive=0,
+            min_operating_capacity=0.15
+        )
 
+        # Extract cumulative cost data from the figure
+        cumulative_cost_data = cumulative_cost_fig.data[0].y
 
+        # Check that the cumulative cost is increasing
+        self.assertTrue(
+            all(cumulative_cost_data[i] <= cumulative_cost_data[i + 1] for i in range(len(cumulative_cost_data) - 1)),
+            "Cumulative cost is not increasing over time.")
+
+    def test_constraint_naming(self):
+        """
+        Verify that constraints are correctly named.
+
+        This test ensures that the generated constraints retain their expected names,
+        preventing unintended modifications.
+        """
+        # Create dummy variables
+        d = cp.Variable(5)
+        p = cp.Variable((2, 5))
+        F = np.zeros(5)
+        t = 2
+
+        # Test block load increase
+        constraint_inc = _block_load_increase_constraint(d, t, block_limit=10)
+        self.assertEqual(constraint_inc._name, BLOCK_DEMAND_INCREASE_CONSTRAINT_NAME)
+
+        # Test block load decrease
+        constraint_dec = _block_load_decrease_constraint(d, t)
+        self.assertEqual(constraint_dec._name, BLOCK_DEMAND_DECREASE_CONSTRAINT_NAME)
+
+        # Test demand constraint
+        constraint_demand = _demand_constraint(p, F, d, t)
+        self.assertEqual(constraint_demand._name, DEMAND_CONSTRAINT_NAME)
 
 
 if __name__ == '__main__':
