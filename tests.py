@@ -99,7 +99,7 @@ class TestRunBasicExample(unittest.TestCase):
         demand = active_power['block demand']
 
         # Check if all block demand values are non-negative
-        self.assertTrue((demand >= 0).all(), "Block demand is negative at some timestep.")
+        self.assertTrue((demand >= 0).all(), "Demand is negative at some timestep.")
 
     def test_initial_generator_status(self):
         """
