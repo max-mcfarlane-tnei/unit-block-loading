@@ -8,7 +8,6 @@ import requests
 
 DIR = os.path.dirname(__file__)
 import json
-# from config import *
 
 
 def get_ngeso_wind_day_ahead():
@@ -18,7 +17,6 @@ def get_ngeso_wind_day_ahead():
     Returns:
     ----------
     pd.DataFrame: A pandas DataFrame containing the wind forecast data.
-
     """
     # Set the URL of the dataset
     url = 'https://data.nationalgrideso.com/api/3/action/datastore_search?resource_id=b2f03146-f05d-4824-a663-3a4f36090c71'
@@ -57,7 +55,7 @@ def get_historic_demand_wind_solar():
         encoding = response.encoding or 'utf-8'  # fallback to utf-8 if encoding not provided
 
         # Parse the CSV response into a DataFrame
-        response_data = pd.read_csv(io.StringIO(response.text))
+        response_data = pd.read_csv(io.StringIO(response.text)).infer_objects()
 
         # Convert data types for selected columns
         response_data = response_data.astype({
@@ -97,14 +95,22 @@ def get_historic_demand_wind_solar():
 
         # Set the index of the DataFrame to be the UTC timestamp, and select the relevant columns
         response_data = response_data.set_index('datetime')[['EMBEDDED_WIND_GENERATION', 'EMBEDDED_SOLAR_GENERATION', 'ND']].copy()
+        response_data.index = pd.Index(response_data.index, dtype='datetime64[ns]')
+
+        # Ensure dtypes are explicitly set
+        response_data = response_data.astype({
+            'EMBEDDED_WIND_GENERATION': 'float64',
+            'EMBEDDED_SOLAR_GENERATION': 'float64',
+            'ND': 'float64'
+        })
 
         # Save the DataFrame to file for future use
         response_data.to_pickle('./_demand_wind_solar.p')
 
     # Return the relevant columns from data
-    return response_data['EMBEDDED_WIND_GENERATION']._set_name('wind'), \
-        response_data['EMBEDDED_SOLAR_GENERATION']._set_name('solar'), \
-        response_data['ND']._set_name('forecasted demand')
+    return response_data['EMBEDDED_WIND_GENERATION'].rename('wind'), \
+        response_data['EMBEDDED_SOLAR_GENERATION'].rename('solar'), \
+        (response_data['ND'] + response_data['EMBEDDED_SOLAR_GENERATION']).rename('forecasted demand')
 
 
 def generate_active_power_inputs(DEMAND_AMPLITUDE, WIND_CAPACITY, T):
@@ -114,7 +120,6 @@ def generate_active_power_inputs(DEMAND_AMPLITUDE, WIND_CAPACITY, T):
     Returns:
     ----------
     tuple: A tuple containing the generated data in the following order: demand, wind, generators.
-
     """
     random_seed = 230425
     np.random.seed(random_seed)
@@ -164,7 +169,6 @@ def sample_generators(num_generators=15, total_capacity=47000, min_percentage=0.
             The minimum time the generator must run once it is started, in half hours.
         - 'Minimum off-time': int
             The minimum time the generator must be off once it is stopped, in half hours.
-
     """
     np.random.seed(230504)
     # Generate random capacities for each generator
@@ -242,6 +246,3 @@ def plot_active_power_generation(wind: pd.Series, solar: pd.Series, demand: pd.S
 
     # Return the figure object
     return fig
-
-
-

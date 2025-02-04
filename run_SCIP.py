@@ -8,7 +8,7 @@ from util import prepare_inputs, process_outputs
 DIR = os.path.dirname(__file__)
 
 
-def run_basic_example(
+def run_basic_example_scip_solver(
         t=config.T,
         n=config.N,
         restart_targets=config.RESTART_TARGETS,
@@ -42,7 +42,7 @@ def run_basic_example(
     prob, u, c, p, d = optimisation.build(demand, renewables, generators, target_checkpoints, block_loading_targets, t)
 
     # Solve the optimization problem
-    prob, u, c, p, d = optimisation.solve(prob, u, c, p, d)
+    prob_scip, u, c, p, d = optimisation.solve_scip(prob, u, c, p, d)
 
     # Create a dataframe for block demand with explicit dtype
     d = pd.Series(d.value, index=demand.index, dtype=float)

@@ -608,3 +608,24 @@ def solve(prob, u, c, p, d, verbose=True, debug=False):
         raise InfeasibleSolutionException
 
     return prob, u, c, p, d
+
+def solve_scip(prob_scip, u, c, p, d, verbose=True, debug=False):
+    """Method for solving."""
+
+    prob_scip.solve(solver=cp.SCIP, verbose=True)
+
+    # # Print the optimal solution
+    # print("Minimum cost: ", prob.value)
+    # print("On/off status: ", u.value)
+    # print("Start-up status: ", c.value)
+    # print("Power output: ", p.value)
+
+
+    # Check if the problem has an optimal solution
+    if prob_scip.status != 'optimal':
+        if debug:
+            # Relax the constraints if the problem is infeasible
+            constraint_status, constraint_group_problem = relax_constraints(prob_scip)
+        raise InfeasibleSolutionException
+
+    return prob_scip, u, c, p, d

@@ -1,8 +1,6 @@
 import os
-
 import numpy as np
 import pandas as pd
-
 import config
 import io_
 
@@ -24,11 +22,7 @@ def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limi
         - target_checkpoints (pd.DataFrame): A DataFrame containing the block loading targets, including the target datetime
                                              and volume.
         - block_loading_targets (pd.Series): A Series containing the block loading targets per timestep.
-
     """
-
-    # Create block loading targets for multiple target configurations
-
     # Convert the index of the demand series to a pandas datetime if needed
     first_date = pd.to_datetime(demand.sort_index().index[0])
 
@@ -57,25 +51,25 @@ def define_block_load_targets(demand, targets=config.RESTART_TARGETS, block_limi
 
         # Create a series containing the target datetime and volume
         target_checkpoints_ = pd.Series({
-            'time': target_datetime,
-            'volume': target_volume,
-            'block_limit': block_limit
-        })
+            'time': pd.Timestamp(target_datetime),  # Ensures datetime dtype
+            'volume': float(target_volume),  # Ensures float dtype
+            'block_limit': float(block_limit)  # Ensures float dtype
+        }, dtype=object)  # Explicitly set dtype to object to avoid inference
 
         # Append the block loading targets series to the list
         target_checkpoints.append(target_checkpoints_)
 
     # Concatenate the block loading targets list into a single DataFrame
-    target_checkpoints = pd.concat(target_checkpoints, axis=1)
+    target_checkpoints = pd.concat(target_checkpoints, axis=1).T
 
     # Transpose the DataFrame and set the 'time' column as the index
-    target_checkpoints = target_checkpoints.T.set_index('time')
+    target_checkpoints = target_checkpoints.set_index('time')
 
     # Create a block loading targets series per timestep
     _block_target_t = [
         ((demand.index < r.Index), r.volume) for r in target_checkpoints.sort_index(ascending=False).itertuples()
     ]
-    block_loading_targets = pd.Series(index=demand.index, data=[0] * len(demand))
+    block_loading_targets = pd.Series(index=demand.index, data=[0] * len(demand), dtype='float64')  # Explicitly setting the dtype here removes FutureWarning of incompatible dtype
     for idx_mask, block_target_ in _block_target_t:
         block_loading_targets[idx_mask] = block_target_
 
@@ -100,7 +94,6 @@ def prepare_inputs(t=config.T, n=config.N, targets=config.RESTART_TARGETS, block
         - generators (DataFrame): Sampled generators based on the number of generators and total capacity.
         - target_checkpoints (list): Checkpoints for defining block loading targets.
         - block_loading_targets (DataFrame): Block loading targets for the demand.
-
     """
     # Get historic wind, solar, and demand data
     wind, solar, demand = io_.get_historic_demand_wind_solar()
@@ -111,26 +104,25 @@ def prepare_inputs(t=config.T, n=config.N, targets=config.RESTART_TARGETS, block
     proportion = SCO_POP / UK_POP
 
     # Limit the data to a certain time period specified by t
-    wind, solar, demand = wind.iloc[:t]*proportion, solar.iloc[:t]*proportion, demand.iloc[:t]*proportion
+    wind = wind.iloc[:t] * proportion
+    solar = solar.iloc[:t] * proportion
+    demand = demand.iloc[:t] * proportion
+
+    # Ensure dtypes are explicitly set
+    wind = wind.astype('float64')
+    solar = solar.astype('float64')
+    demand = demand.astype('float64')
 
     # Sample generators based on the number of generators ('N') and total capacity
     generators = io_.sample_generators(num_generators=n, total_capacity=(demand - wind - solar).max(),
                                        min_percentage=min_operating_capacity)
 
     np.random.seed(230516)
-
     generators_offline = np.random.randint(0, n, generators_inactive)
-
     generators = generators[~generators.index.to_series().isin(generators_offline)].reset_index(drop=True)
 
-    # Plot the active power generation using wind, solar, and demand data
-    # active_power_plot = io_.plot_active_power_generation(wind, solar, demand)
-
-    # Uncomment the following line if you want to show the active power plot
-    # active_power_plot.show()
-
     # Calculate the total renewable power output by summing wind and solar power
-    renewables = wind + solar
+    renewables = (wind + solar).astype('float64')
 
     # Compile block loading targets
     target_checkpoints, block_loading_targets = define_block_load_targets(demand, targets, block_limit)
@@ -160,6 +152,8 @@ def process_outputs(wind, solar, demand, generators, p, d):
     # Calculate net demand and net generation by summing the power output of all generators
     active_power['block demand'] = d
     active_power['net demand'] = demand - wind - solar
-    active_power['net generation'] = active_power[generators['Name']].sum(axis=1)
+
+    # Ensure dtypes are explicitly set
+    active_power = active_power.astype('float64')
 
     return active_power

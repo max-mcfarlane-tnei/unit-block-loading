@@ -33,7 +33,7 @@ This repository provides an example implementation of block loading optimisation
 To use the repository, follow these steps:
 
 1. Clone the repository to your local machine.
-2. Install the required dependencies as specified in the documentation.
+2. Install a virtual environment and install the required dependencies using the requirements.txt file. 
 3. Configure the optimisation parameters, including demand and generation data, system constraints, and other relevant settings.
 4. Run the optimisation algorithm to generate optimised block loading schedules and resource allocations.
 5. Utilise the provided visualisation and reporting tools to analyse and communicate the optimisation results.
@@ -46,10 +46,14 @@ This repository is provided without a licence, allowing for free usage, modifica
 
 Please note that while there are no legal restrictions, it is always good practise to acknowledge the original source or give credit to the repository when using the code.
 
-## Maintainer
+## Developers
 
 This repository is maintained by Max McFarlane.
 
 - Email: [max.mcfarlane@tneigroup.com](mailto:max.mcfarlane@tneigroup.com)
+
+Supporting developer
+
+- Email: [oscar.hlustik@tneigroup.com](mailto:oscar.hlustik@tneigroup.com) 
 
 If you have any questions or feedback, please contact the maintainer.
